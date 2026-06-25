@@ -1,10 +1,10 @@
 #ifndef UI_H
 #define UI_H
 
+#include "utils.h"
 #include <ncurses.h>
 
 #define MARGIN 1 //Valor margenes entre ventanas y con el borde de la ventana
-
 
 typedef struct {
     char* name; // nombre identificativo
@@ -14,9 +14,7 @@ typedef struct {
     int starty; // fila inicial
     int startx; // columna inicial
     bool has_focus; // si tiene el foco actualmente
-    char **content; // contenido por filas 
-    int numlines; // numero de lineas de contenido
-    int maxlines; // memoria reservada para el contenido
+    content_t content; // el contenido
     int selected_line; // la linea seleccionada actualmente
 }Section;
 
@@ -28,10 +26,6 @@ typedef enum {
     UI_ACTION_CHANGE_FOCUS
 } ui_action_t;
 
-void section_init_content(Section *sec, int content_size);
-void section_add_line(Section *sec, const char *texto);
-void section_add_char(Section *sec, int line_index, const char c);
-void section_clear(Section *sec); 
 void section_print(Section *sec);
 int section_getch(Section *sec);
 void section_delwin(Section *sec);
@@ -54,6 +48,6 @@ void search_init_text();
 void search_set_focus();
 
 int center_create_window();
-void center_set_content(char *content[], int numlines);
+void center_set_content(content_t *content);
 
 #endif

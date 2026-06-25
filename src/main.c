@@ -1,8 +1,15 @@
-#include <stdio.h>
+#include "utils.h"
 #include "ui.h"
+#include "deezer_api.h"
+#include <stdio.h>
 
 int main() {
     bool running = true;
+    content_t content;
+    ui_action_t action;
+    char *api_resp;
+
+    content_init(&content, 1);
     // Seccion window curses
     // init
     if (!ui_init()) {
@@ -11,15 +18,7 @@ int main() {
     }
 
     while(running) {
-        ui_action_t action = ui_handle_input(); // bloquea esperando tecla
-        char *resp[6] = {
-            "Linea 1",
-            "Linea 2",
-            "Linea 3",
-            "Linea 4",
-            "Linea 5\tHe puesto un tab",
-            "Linea 6"
-        };
+        action = ui_handle_input(); // bloquea esperando tecla
 
         switch (action) {
             case UI_ACTION_SELECT:
@@ -30,7 +29,9 @@ int main() {
                 // imaginemos que la api nos ha devuelto este string
                 // y despues de tratarlo lo hemos convertido a 
                 // un array de strings linea a linea 
-                center_set_content(resp, 6);
+                api_resp = deezer_search("query");
+                content_add_line(&content, api_resp);
+                center_set_content(&content);
                 break;
             case UI_ACTION_QUIT:
                 running = false;

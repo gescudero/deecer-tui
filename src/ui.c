@@ -7,66 +7,6 @@
 /*************
  *  HELPERS
  ************/
-// Init content array and its memory
-void section_init_content(Section *sec, int content_size) {
-    // se configura maxlines
-    sec->maxlines = content_size;
-    // se reserva el espacio para el numero maximo de lineas de tipo char*
-    sec->content = malloc(sec->maxlines * sizeof(char*));
-    // se ponen cada uno de esos espacios a NULL
-    for (int i=0; i < sec->maxlines; i++) {
-        sec->content[i] = NULL;  
-    }
-    // se inicializa nuestro contador de contenido.
-    sec->numlines = 0;
-    
-}
-// Add line to section line array - does not print anything, only to manage memory
-void section_add_line(Section *sec, const char *texto) {
-    // comprobamos si tenemos memoria suficiente y si no 
-    // tenemos ampliamos al doble del tamaño actual.
-    if (sec->numlines >= sec->maxlines) {
-        sec->maxlines *= 2;
-        sec->content = realloc(sec->content, sec->maxlines * sizeof(char*));
-    }
-    // copiamos el contenido de texto en el indice del ultimo contador
-    // strdup reservará el espacio necesario en nuestro char*
-    sec->content[sec->numlines] = strdup(texto);
-    sec->numlines++;
-}
-// Add char to the current line
-void section_add_char(Section *sec, int line_index, const char c) {
-    // iniciamos el contador del indice del ultimo caracter en la linea
-    // que vamos a editar
-    int len = 0;
-    // si la linea no está vacia entonces medimos su contenido
-    if (sec->content[line_index] != NULL) {
-        len = strlen(sec->content[line_index]);
-    }
-    // creamos el espacio de memoria para poder añadir caracteres
-    sec->content[line_index] = realloc(sec->content[line_index], len + 2);
-    // añadimos el caracter en el indice que toca
-    sec->content[line_index][len] = c;
-    // añadimos el carecter de terminacion del string
-    sec->content[line_index][len+1] = '\0';
-    // pasamos a la linea siguiente para estar preparado.
-    sec->numlines = line_index + 1;
-}
-// Clear content and free memory
-void section_clear(Section *sec) {
-    // recorremos cada linea usada y liberamos su memoria
-    for (int i = 0; i < sec->numlines+1; i++) {
-        free(sec->content[i]);
-    }
-    // liberamos el espacio de content globalmente
-    free(sec->content);
-    // seteamos content a NULL
-    sec->content = NULL;
-    // reinciamos el contador de lineas escritas
-    sec->numlines = 0;
-    // seteamos a 0 el maximo de lineas
-    sec->maxlines = 0;
-}
 // Print content
 void section_print(Section *sec) {
     // borramos el contenido que hubiera en pantalla
@@ -93,18 +33,18 @@ void section_print(Section *sec) {
     // (util si estamos bajando o imprimiendo mientras llegan datos
     // pero no es util cuando le pongamos un monton de datos en los 
     // que hay que navegar)
-    if (sec->numlines > sec->height - 2) {
-        i = sec->numlines - (sec->height - 2);
+    if (sec->content.numlines > sec->height - 2) {
+        i = sec->content.numlines - (sec->height - 2);
     }
     // imprimimos linea a linea y pintamos diferente 
     // la linea seleccionada
-    for (; i<sec->numlines; ++i) {
+    for (; i<sec->content.numlines; ++i) {
         if (sec->selected_line == i+1) {
             wattron(sec->win, A_REVERSE);
-            mvwprintw(sec->win, y, x, "%s", sec->content[i]);
+            mvwprintw(sec->win, y, x, "%s", sec->content.text[i]);
             wattroff(sec->win, A_REVERSE);
         } else {
-            mvwprintw(sec->win, y, x, "%s", sec->content[i]);
+            mvwprintw(sec->win, y, x, "%s", sec->content.text[i]);
         }
         ++y;
     }
@@ -115,43 +55,58 @@ void section_print(Section *sec) {
 int section_getch(Section *sec) {
     return wgetch(sec->win);
 }
+// Delete win
 void section_delwin(Section *sec) {
     if (sec->win != NULL) {
         delwin(sec->win);
     }
 }
+// Avanzar a la siguiente linea/opcion seleccionable
 void section_next_option(Section *sec) {
-    if (sec->selected_line == sec->numlines) {
+    if (sec->selected_line == sec->content.numlines) {
         sec->selected_line = 1;
     } else {
         ++sec->selected_line;
     }
 }
+// Retroceder a la opcion anterior
 void section_prev_option(Section *sec) {
     if (sec->selected_line == 1) {
-        sec->selected_line = sec->numlines;
+        sec->selected_line = sec->content.numlines;
     } else {
         --sec->selected_line;
     }
 }
+// Fijar el foco en una seccion
 void section_set_focus(Section *sec) {
+    // excepcion para la ventana de busqueda
     if (strcmp(sec->name, "search") == 0) {
-        section_clear(sec);
-        section_init_content(sec, 2);
+        content_clear(&sec->content);
+        content_init(&sec->content, 2);
     }
+    // marcamos la variable a true
     sec->has_focus = true;
+    // activamos la entrada del teclado en la ventana
     keypad(sec->win, TRUE);
+    // seleccionamos la primera linea por defecto
     sec->selected_line = 1;
+    // repintamos la pantalla
     section_print(sec);
 }
+// Quitamos el foco de la ventana
 void section_unset_focus(Section *sec) {
+    // guardamos el estado actual
     sec->has_focus = false;
+    // desactivamos la entrada por teclado
     keypad(sec->win, FALSE);
+    // eliminamos la seleccion
     sec->selected_line = 0;
+    // refrescamos la pantalla
     section_print(sec);
 }
+// Devolvemos el contenido de la linea seleccionada
 const char* section_get_selected_value(Section *sec) {
-    return sec->content[sec->selected_line - 1];
+    return sec->content.text[sec->selected_line - 1];
 }
 /*************
  *
@@ -159,12 +114,15 @@ const char* section_get_selected_value(Section *sec) {
  *
  ************/
 int screen_height, screen_width;
-/* struct way*/
+
+// Las secciones de la UI
 Section menu = {0};
 Section search = {0};
 Section center = {0};
 
+// Inicializacion de ncurses y nuestras ventanas
 bool ui_init() {
+    // funciones de inicializacion de ncurses
     initscr();
     cbreak();
     noecho();
@@ -172,9 +130,10 @@ bool ui_init() {
     ui_start_colors();
     keypad(stdscr, FALSE);
     refresh();
-
+    // dimensiones de la pantalla
     getmaxyx(stdscr, screen_height, screen_width);
 
+    // creamos nuestras secciones
     if (!menu_create_window()) {
         ui_end();
         return false;
@@ -190,7 +149,7 @@ bool ui_init() {
 
     return true;
 }
-
+// Destruccion de la UI
 void ui_end() {
     section_delwin(&menu);
     section_delwin(&search);
@@ -198,14 +157,17 @@ void ui_end() {
     clrtoeol();
     endwin();
 }
+// Inicializacion de los pares de colores
 void ui_start_colors() {
     start_color();
     init_pair(1, COLOR_CYAN, COLOR_BLACK);
 }
+// Cambio de foco de ventana. 
+// Comportamiento al pulsar la tecla TAB
 void ui_change_focus() {
     if (menu.has_focus) {
         section_unset_focus(&menu);
-        section_add_line(&center, "Cambiamos foco a search");
+        content_add_line(&center.content, "Cambiamos foco a search");
         section_print(&center);
         section_set_focus(&search);
     } else if (search.has_focus) {
@@ -216,27 +178,32 @@ void ui_change_focus() {
         section_set_focus(&menu);
     }
 }
+// Funcion que se ejecuta en el bucle principal y que espera 
+// la accion del usuario. Una vez el usuario pulsa alguna tecla
+// ejecutamos lo necesario y devolvemos la accion realizada
+// excepto en el caso de la busqueda, que nos quedamos en un bucle
+// hasta que el usuario pulse ENTER o TAB para salir del campo de busqueda
 ui_action_t ui_handle_input() {
     int pressed_key = 0;
 
-    if (menu.has_focus) {
+    if (menu.has_focus) {   // Acciones en la ventana de menu
         pressed_key = section_getch(&menu);
         switch (pressed_key) {
-            case KEY_UP:
+            case KEY_UP: // flecha arriba
                 section_prev_option(&menu);
                 break;
-            case KEY_DOWN:
+            case KEY_DOWN: // flecha abajo
                 section_next_option(&menu);
                 break;
-            case 9:
+            case 9: // TAB
                 ui_change_focus();
                 return UI_ACTION_CHANGE_FOCUS;
                 break;
-            case 10:
+            case 10: // ENTER
                 // seleccionada opcion
                 // de momento solo imprimimos
                 // la seleccion en la ventana central
-                section_add_line(&center, section_get_selected_value(&menu));
+                content_add_line(&center.content, section_get_selected_value(&menu));
                 section_print(&center);
                 return UI_ACTION_SELECT;
             case 'q':
@@ -249,27 +216,31 @@ ui_action_t ui_handle_input() {
         }
         section_print(&menu);
         
-    } else if (search.has_focus) {
+    } else if (search.has_focus) { // Acciones en la ventana de busqueda
+        // Hasta que no pulsen ENTER o TAB, cada tecla la escribimos en el campo
+        // de texto. Tenemos que resolver pulsaciones no alfanumericas y
+        // permitir borrar
         while (pressed_key != 10 && pressed_key != 9) {
             pressed_key = wgetch(search.win);
-            section_add_char(&search, 0, pressed_key); // la añadimos a nuestro content
+            content_add_char(&search.content, 0, pressed_key); // la añadimos a nuestro content
             section_print(&search);
         }
+        // una vez fuera del bucle comprobamos si era ENTER o TAB
         if (pressed_key == 9) {
-            section_add_line(&center, "No quieren buscar :(");
+            content_add_line(&center.content, "No quieren buscar :(");
             section_print(&center);
             ui_change_focus();
             return UI_ACTION_CHANGE_FOCUS;
 
         } else if (pressed_key == 10) {
-            section_add_line(&center, "Se pide una busqueda. Devolvemos UI_ACTION_SEARCH");
+            content_add_line(&center.content, "Se pide una busqueda. Devolvemos UI_ACTION_SEARCH");
             section_print(&center);
             ui_change_focus();
             return UI_ACTION_SEARCH;
         }
         return UI_ACTION_NONE;
 
-    } else if (center.has_focus) {
+    } else if (center.has_focus) { // Acciones en la ventana central
         pressed_key = section_getch(&center);
         switch (pressed_key) {
             case KEY_UP:
@@ -319,11 +290,11 @@ int menu_create_window() {
     // contenido
     menu.has_focus = true; // el foco al iniciar la app es en el menu
     menu.selected_line = 1; // preseleccionamos la primera linea
-    section_init_content(&menu, 5); // inicializamos el contenido y su espacio en memoria
-    section_add_line(&menu, "Home");
-    section_add_line(&menu, "Explore");
-    section_add_line(&menu, "Library");
-    section_add_line(&menu, "Settings");
+    content_init(&menu.content, 5); // inicializamos el contenido y su espacio en memoria
+    content_add_line(&menu.content, "Home");
+    content_add_line(&menu.content, "Explore");
+    content_add_line(&menu.content, "Library");
+    content_add_line(&menu.content, "Settings");
     
     section_print(&menu);
     return 1; // devolvemos OK
@@ -350,23 +321,23 @@ int search_create_window() {
     // Contenido 
     search.has_focus = false; // no tenemos el foco al inicial la app
     search.selected_line = 0; // en esta ventana no se usa el campo selected_line
-    section_init_content(&search, 2); // inicializamos la memoria con 2 lineas de maximo.
+    content_init(&search.content, 2); // inicializamos la memoria con 2 lineas de maximo.
     search_init_text(); // inicializamos el texto
 
     return 1;
 }
 void search_init_text() {
-    section_add_line(&search, "Search ..."); // añadimos la linea al contenido.
+    content_add_line(&search.content, "Search ..."); // añadimos la linea al contenido.
     wattron(search.win, COLOR_PAIR(1)); // set color
-    mvwprintw(search.win, 1, 1, "%s", search.content[search.numlines - 1]); // imprimimos la linea
+    mvwprintw(search.win, 1, 1, "%s", search.content.text[search.content.numlines - 1]); // imprimimos la linea
     wattroff(search.win, COLOR_PAIR(1)); // unset color
     wrefresh(search.win);
 }
 void search_set_focus() {
     //Cambiamos foco a la caja de busqueda
     search.has_focus = true;
-    section_clear(&search);
-    section_init_content(&search, 2);
+    content_clear(&search.content);
+    content_init(&search.content, 2);
     keypad(search.win, TRUE);
     werase(search.win);
     wattron(search.win, COLOR_PAIR(1));
@@ -393,23 +364,16 @@ int center_create_window() {
     // contenido
     center.has_focus = false;
     center.selected_line = 0; // numero de linea seleccionada
-    section_init_content(&center, center.height);
+    content_init(&center.content, center.height);
 
     box(center.win, 0, 0);
 
-    section_add_line(&center, "Bienvenido a deecer <3");
+    content_add_line(&center.content, "Bienvenido a deecer <3");
     section_print(&center);
 
     return 1;
 }
-void center_set_content(char *content[], int numlines) {
-    // liberamos nuestro anterior content
-    section_clear(&center);
-    //creamos el espacio para el nuevo contenido
-    section_init_content(&center, numlines + 1);
-    // recorremos el array recibido y lo copiamos en el nuestro
-    for (int i=0; i<numlines; i++) {
-        section_add_line(&center, content[i]);
-    }
+void center_set_content(content_t *content) {
+    content_copy(&center.content, content);
     section_print(&center);
 }

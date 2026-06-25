@@ -27,8 +27,7 @@ static size_t writecallback(char *contents, size_t size, size_t nmemb, void *use
 
 
 char* deezer_search(const char *query) {
-    char *resp = "";
-
+    char *resp = "Esta es la respuesta.";
 
     return resp;
 }
