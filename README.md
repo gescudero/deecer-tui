@@ -6,6 +6,8 @@ Este es un proyecto con la única intención de aprender el lenguaje C, por lo q
 Una de las cosas que puede que te llamen la atención es que este repo esté documentado en español, y si miras el código, la mayoría de comentarios también están en español. Esto tiene una explicación, yo hablo español xD 
 
 ## Enlaces
+[El lenguaje de programacion C](https://frrq.cvg.utn.edu.ar/pluginfile.php/13741/mod_resource/content/0/El-lenguaje-de-programacion-C-2-ed-kernighan-amp-ritchie.pdf) por Kernighan y Ritchie
+
 [Un curso de C de 7 horas en youtube gratis](https://www.youtube.com/watch?v=xND0t1pr3KY&list=PL2v1b_nyIe6Wyt8E1pJ_kuYp5Q0JTZ6ak&index=4) por Bro Code  
 
 [Uno de los creadores de libcurl enseñandote a usarlo](https://www.youtube.com/watch?v=nbTaHEocCuo) por Daniel Stenberg  
