@@ -1,5 +1,6 @@
 #include "ui.h"
 #include <ncurses.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
@@ -8,7 +9,7 @@
  *  HELPERS
  ************/
 // Print content
-void section_print(Section *sec) {
+void section_print(section_t *sec) {
     // borramos el contenido que hubiera en pantalla
     werase(sec->win);
     // caso especial para la ventana de busqueda
@@ -52,17 +53,17 @@ void section_print(Section *sec) {
     wrefresh(sec->win);
 }
 // Get char from section
-int section_getch(Section *sec) {
+int section_getch(section_t *sec) {
     return wgetch(sec->win);
 }
 // Delete win
-void section_delwin(Section *sec) {
+void section_delwin(section_t *sec) {
     if (sec->win != NULL) {
         delwin(sec->win);
     }
 }
 // Avanzar a la siguiente linea/opcion seleccionable
-void section_next_option(Section *sec) {
+void section_next_option(section_t *sec) {
     if (sec->selected_line == sec->content.numlines) {
         sec->selected_line = 1;
     } else {
@@ -70,7 +71,7 @@ void section_next_option(Section *sec) {
     }
 }
 // Retroceder a la opcion anterior
-void section_prev_option(Section *sec) {
+void section_prev_option(section_t *sec) {
     if (sec->selected_line == 1) {
         sec->selected_line = sec->content.numlines;
     } else {
@@ -78,7 +79,7 @@ void section_prev_option(Section *sec) {
     }
 }
 // Fijar el foco en una seccion
-void section_set_focus(Section *sec) {
+void section_set_focus(section_t *sec) {
     // excepcion para la ventana de busqueda
     if (strcmp(sec->name, "search") == 0) {
         content_clear(&sec->content);
@@ -94,7 +95,7 @@ void section_set_focus(Section *sec) {
     section_print(sec);
 }
 // Quitamos el foco de la ventana
-void section_unset_focus(Section *sec) {
+void section_unset_focus(section_t *sec) {
     // guardamos el estado actual
     sec->has_focus = false;
     // desactivamos la entrada por teclado
@@ -105,7 +106,7 @@ void section_unset_focus(Section *sec) {
     section_print(sec);
 }
 // Devolvemos el contenido de la linea seleccionada
-const char* section_get_selected_value(Section *sec) {
+const char* section_get_selected_value(section_t *sec) {
     return sec->content.text[sec->selected_line - 1];
 }
 /*************
@@ -116,9 +117,9 @@ const char* section_get_selected_value(Section *sec) {
 int screen_height, screen_width;
 
 // Las secciones de la UI
-Section menu = {0};
-Section search = {0};
-Section center = {0};
+section_t menu = {0};
+section_t search = {0};
+section_t center = {0};
 
 // Inicializacion de ncurses y nuestras ventanas
 bool ui_init() {
@@ -183,7 +184,7 @@ void ui_change_focus() {
 // ejecutamos lo necesario y devolvemos la accion realizada
 // excepto en el caso de la busqueda, que nos quedamos en un bucle
 // hasta que el usuario pulse ENTER o TAB para salir del campo de busqueda
-ui_action_t ui_handle_input() {
+ui_action_t ui_handle_input(char *return_value) {
     int pressed_key = 0;
 
     if (menu.has_focus) {   // Acciones en la ventana de menu
@@ -236,6 +237,7 @@ ui_action_t ui_handle_input() {
             content_add_line(&center.content, "Se pide una busqueda. Devolvemos UI_ACTION_SEARCH");
             section_print(&center);
             ui_change_focus();
+            strcpy(return_value, search.content.text[0]);
             return UI_ACTION_SEARCH;
         }
         return UI_ACTION_NONE;

@@ -44,6 +44,8 @@ struct Artist {
     char *tracklist; //api link to top of this artist [url]
 };
 
+void deezer_init();
+void deezer_cleanup();
 char* deezer_search(const char *query);
 char* deezer_get_album(int id);
 char* deezer_get_artist(int id);

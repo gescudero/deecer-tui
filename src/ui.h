@@ -16,7 +16,7 @@ typedef struct {
     bool has_focus; // si tiene el foco actualmente
     content_t content; // el contenido
     int selected_line; // la linea seleccionada actualmente
-}Section;
+}section_t;
 
 typedef enum {
     UI_ACTION_NONE,
@@ -26,20 +26,20 @@ typedef enum {
     UI_ACTION_CHANGE_FOCUS
 } ui_action_t;
 
-void section_print(Section *sec);
-int section_getch(Section *sec);
-void section_delwin(Section *sec);
-void section_next_option(Section *sec);
-void section_prev_option(Section *sec);
-void section_set_focus(Section *sec);
-void section_unset_focus(Section *sec);
-const char* section_get_selected_value(Section *sec);
+void section_print(section_t *sec);
+int section_getch(section_t *sec);
+void section_delwin(section_t *sec);
+void section_next_option(section_t *sec);
+void section_prev_option(section_t *sec);
+void section_set_focus(section_t *sec);
+void section_unset_focus(section_t *sec);
+const char* section_get_selected_value(section_t *sec);
 
 bool ui_init();
 void ui_end();
 void ui_start_colors();
 void ui_change_focus();
-ui_action_t ui_handle_input();
+ui_action_t ui_handle_input(char *return_value);
 
 int menu_create_window();
 

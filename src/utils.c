@@ -26,6 +26,12 @@ void content_add_line(content_t *cont, const char *texto){
     cont->numlines++;
 };
 void content_add_char(content_t *cont, int line_index, const char c) {
+    // Evitamos escribir algunos caracteres no imprimibles
+    // de momento filtramos \n y \t
+    if (c == 10 || c == 13 || c == 9) {
+        return;
+    }
+
     // iniciamos el contador del indice del ultimo caracter en la linea
     // que vamos a editar
     int len = 0;
@@ -63,13 +69,27 @@ void content_add(content_t *dest, const content_t *addition) {
 }
 
 void content_clear(content_t *cont) {
-    // recorremos cada linea usada y liberamos su memoria
-    for (int i = 0; i < cont->numlines+1; i++) {
-        free(cont->text[i]);
+    // si el puntero es null evitamos free porque lo hace petar
+    if (cont == NULL) {
+        return;
     }
-    // liberamos el espacio de content globalmente
+    // lo mismo. si el texto es null, no free
+    if (cont->text == NULL) {
+        cont->numlines = 0;
+        cont->maxlines = 0;
+        return;
+    }
+    // recorremos cada linea usada y liberamos su memoria
+    // si es necesario
+    for (int i = 0; i < cont->numlines; i++) {
+        if (cont->text[i] != NULL) {
+            free(cont->text[i]);
+            cont->text[i] = NULL;
+        }
+    }
+    // liberamos el espacio de content->text
     free(cont->text);
-    // seteamos content a NULL
+    // seteamos content->text a NULL
     cont->text = NULL;
     // reinciamos el contador de lineas escritas
     cont->numlines = 0;

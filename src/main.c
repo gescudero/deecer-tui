@@ -8,8 +8,10 @@ int main() {
     content_t content;
     ui_action_t action;
     char *api_resp;
+    char search_query[256];
 
-    content_init(&content, 1);
+    deezer_init();
+
     // Seccion window curses
     // init
     if (!ui_init()) {
@@ -18,7 +20,7 @@ int main() {
     }
 
     while(running) {
-        action = ui_handle_input(); // bloquea esperando tecla
+        action = ui_handle_input(search_query); // bloquea esperando tecla
 
         switch (action) {
             case UI_ACTION_SELECT:
@@ -26,12 +28,33 @@ int main() {
                 break;
             case UI_ACTION_SEARCH:
                 // hacer llamadas a la api
-                // imaginemos que la api nos ha devuelto este string
-                // y despues de tratarlo lo hemos convertido a 
-                // un array de strings linea a linea 
-                api_resp = deezer_search("query");
-                content_add_line(&content, api_resp);
+                
+                // inicializamos el buffer
+                content_init(&content, 1);
+                // limpiamos la ventana mientras hacemos
+                // la busqueda, aqui pondriamos una barra 
+                // de progreso si lo creemos necesario
                 center_set_content(&content);
+                // hacemos la consulta pasandole el texto
+                // que hemos recibido del campo de busqueda
+                // y esperamos la respuesta
+                api_resp = deezer_search(search_query);
+                // ahora mismo recibimos un string largo
+                // en formato json, pero probablemente debamos
+                // recibir algo ya formateado como un objeto personalizado
+                // que contenga una lista de items del tipo que 
+                // estemos buscando
+                //
+                //añadimos una linea al contenido con la respuesta
+                content_add_line(&content, api_resp);
+                // seteamos el contenido
+                center_set_content(&content);
+                // liberamos la memoria de la respuesta y de nuestro buffer
+                content_clear(&content);
+                if (api_resp != NULL) {
+                    free(api_resp);
+                    api_resp = NULL;
+                }
                 break;
             case UI_ACTION_QUIT:
                 running = false;
@@ -42,5 +65,7 @@ int main() {
                 break;
         }
     }
+    deezer_cleanup();
+    ui_end();
     return 0;
 }
