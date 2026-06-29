@@ -15,29 +15,29 @@ struct memory {
 /****
  * DEEZER MODELS
  ****/
-typedef struct Track Track;
-typedef struct Album Album;
-typedef struct Artist Artist;
+typedef struct track_t track_t;
+typedef struct album_t album_t;
+typedef struct artist_t artist_t;
 
-struct Track {
+struct track_t {
     int id; // id
     bool readable; // is readable on device
     char *title; // track title
     char *title_short; // track short title
-    Artist *artist; // Artist object
-    Album *album; // Album object
+    artist_t *artist; // Artist object
+    album_t *album; // Album object
     char *preview; // link to preview [url]
 };
 
-struct Album {
+struct album_t {
     int id; // id
     char *title; // title of album
     int nb_tracks; // number of tracks
-    Artist *artist; // artist object
-    Track **tracks; // list of track objects
+    artist_t *artist; // artist object
+    track_t **tracks; // list of track objects
 };
 
-struct Artist {
+struct artist_t {
     int id; // id
     char *name; // name
     char *link; // link to deezer [url]

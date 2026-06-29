@@ -45,6 +45,10 @@ int main() {
                 // que contenga una lista de items del tipo que 
                 // estemos buscando
                 //
+                //Comprobamos que no recibamos respuesta NULL
+                if (api_resp == NULL) {
+                    break;
+                }
                 //añadimos una linea al contenido con la respuesta
                 content_add_line(&content, api_resp);
                 // seteamos el contenido

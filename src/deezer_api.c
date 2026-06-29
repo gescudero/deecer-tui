@@ -1,9 +1,10 @@
 #include "deezer_api.h"
+#include <stdio.h>
+#include <string.h>
 #include <curl/curl.h>
 #include <curl/easy.h>
 #include <curl/typecheck-gcc.h>
-#include <stdio.h>
-#include <string.h>
+#include <cjson/cJSON.h>
 
 // el objeto curl, el manejador del cotarro
 CURL *curl_handle;
@@ -44,7 +45,7 @@ char* deezer_search(const char *query) {
         // Mediante setopt vamos configurando nuestra peticion
         // 1. le damos la url
         char *url = NULL;
-        asprintf(&url, "https://api.deezer.com/artist/%s", query);
+        asprintf(&url, "https://api.deezer.com/search?q=%s", query);
         curl_easy_setopt(curl_handle, CURLOPT_URL, url); 
         // 2. le pasamos nuestra funcion de callback para que nos responda
         curl_easy_setopt(curl_handle, CURLOPT_WRITEFUNCTION, writecallback);
@@ -68,7 +69,43 @@ char* deezer_search(const char *query) {
             if ((CURLE_OK == curl_res) && contenttype) {
                 // co0mprobamos si hemos recibido un json
                 if (strstr(contenttype, "application/json")) {
-                    asprintf(&resp, "Ahora si que hemos detectado el json: %s", chunk.memory);
+                    
+                    // creamos el objeto que contendrá el json
+                    cJSON *json = cJSON_Parse(chunk.memory);
+                    // comprobamos que el objeto JSON cumpla nuestras necesidades
+                    if (json == NULL) {
+                        const char *error_ptr = cJSON_GetErrorPtr();
+                        asprintf(&resp, "Error leyendo el json: %s\n", error_ptr);
+                    } else if (cJSON_IsInvalid(json) || !cJSON_IsObject(json)){
+                        // El json no se ha parseado bien o hemos recibido algo chunguer
+                        // nosotros esperamos un Objeto, asi que si no es asi
+                        // Cancelamos y devolvemos un mensajito de error
+                        asprintf(&resp, "el objeto json es invalido, un poco cojo\n");
+                    } else {
+                        // access to data
+                        cJSON *data = cJSON_GetObjectItemCaseSensitive(json, "data");
+                        cJSON *num_objects = cJSON_GetObjectItem(json, "total");
+                        // el objeto que contiene el numero total de items que devuelve 
+                        // la query en distintas pages. Como maximo recibiremos 25 items
+                        // por consulta
+                        if (num_objects != NULL) {
+                            if (cJSON_IsNumber(num_objects)) {
+                                asprintf(&resp, "Hay un total de %d resultados. Mostramos los 25 primeros\n", 
+                                        num_objects->valueint);
+                            } else {
+                                asprintf(&resp, "Parece que no es numerico");
+                            }
+                        } else {
+                            asprintf(&resp, "el objeto num_objects es NULL");
+                        }
+                        // el objeto que contiene todos los datos, es un Array de items
+                        if (data !=NULL) {
+                            if (cJSON_IsArray(data)) {
+                                //Hemos recibido un array, vamos bien
+                            }
+                        }
+                    }
+                    cJSON_Delete(json);
                 } else {
                     asprintf(&resp, "Hemos recibido Content-Type: %s\n"
                             "Esperabamos otra cosa\n", contenttype);
