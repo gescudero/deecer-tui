@@ -1,5 +1,6 @@
 #ifndef DEEZER_API_H
 #define DEEZER_API_H
+#include "utils.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
@@ -46,7 +47,7 @@ struct artist_t {
 
 void deezer_init();
 void deezer_cleanup();
-char* deezer_search(const char *query);
+content_t* deezer_search(const char *query);
 char* deezer_get_album(int id);
 char* deezer_get_artist(int id);
 char* deezer_get_chart(int id);

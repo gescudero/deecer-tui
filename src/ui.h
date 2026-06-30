@@ -14,7 +14,7 @@ typedef struct {
     int starty; // fila inicial
     int startx; // columna inicial
     bool has_focus; // si tiene el foco actualmente
-    content_t content; // el contenido
+    content_t *content; // el contenido
     int selected_line; // la linea seleccionada actualmente
 }section_t;
 
