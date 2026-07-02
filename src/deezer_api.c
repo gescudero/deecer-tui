@@ -1,11 +1,7 @@
-#include "utils.h"
 #include "deezer_api.h"
+#include "utils.h"
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
-#include <curl/curl.h>
-#include <curl/easy.h>
-#include <curl/typecheck-gcc.h>
 #include <cjson/cJSON.h>
 
 // el objeto curl, el manejador del cotarro
@@ -91,11 +87,15 @@ content_t* deezer_search(const char *query) {
                         // por consulta
                         if (num_objects != NULL) {
                             if (cJSON_IsNumber(num_objects)) {
+                                /**
+                                 * comprobado que tenemos el numero de resultados
+                                 * totales en la variable num_objects
                                 char *text;
                                 asprintf(&text, "Hay un total de %d resultados. Mostramos los 25 primeros\n", 
                                         num_objects->valueint);
                                 content_add_line(resp, text);
                                 free(text);
+                                **/
                             } else {
                                 content_add_line(resp, "Parece que no es numerico");
                             }

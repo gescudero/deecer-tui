@@ -7,7 +7,7 @@
 int main() {
     bool running = true;
     ui_action_t action;
-    char search_query[256];
+    char ui_response[256];
 
     deezer_init();
 
@@ -19,7 +19,7 @@ int main() {
     }
 
     while(running) {
-        action = ui_handle_input(search_query); // bloquea esperando tecla
+        action = ui_handle_input(ui_response); // bloquea esperando tecla
 
         switch (action) {
             case UI_ACTION_SELECT:
@@ -30,7 +30,7 @@ int main() {
                 // hacemos la consulta pasandole el texto
                 // que hemos recibido del campo de busqueda
                 // y esperamos la respuesta
-                content_t *resp = deezer_search(search_query);
+                content_t *resp = deezer_search(ui_response);
                 
                 if (resp != NULL) {
                     // seteamos el contenido
@@ -40,6 +40,16 @@ int main() {
                 }
                 break;
                                    }
+            case UI_ACTION_PLAY: {
+                // Nos piden reproducir un track
+                // deberiamos recibir en ui_response 
+                // el trackID para pasarselo al player
+                content_t *track_id = content_create(1);
+                content_add_line(track_id, ui_response);
+                center_set_content(track_id);                
+                content_free(track_id);
+                break;
+                                 }
             case UI_ACTION_QUIT:
                 running = false;
                 break;

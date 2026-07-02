@@ -23,6 +23,7 @@ typedef enum {
     UI_ACTION_QUIT,
     UI_ACTION_SEARCH,
     UI_ACTION_SELECT,
+    UI_ACTION_PLAY,
     UI_ACTION_CHANGE_FOCUS
 } ui_action_t;
 

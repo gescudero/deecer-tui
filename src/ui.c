@@ -113,12 +113,12 @@ const char* section_get_selected_value(section_t *sec) {
  *  MAIN NCURSES SCREEN AND SHARED
  *
  ************/
-int screen_height, screen_width;
+static int screen_height, screen_width;
 
 // Las secciones de la UI
-section_t menu = {0};
-section_t search = {0};
-section_t center = {0};
+static section_t menu = {0};
+static section_t search = {0};
+static section_t center = {0};
 
 // Inicializacion de ncurses y nuestras ventanas
 bool ui_init() {
@@ -166,14 +166,15 @@ void ui_start_colors() {
 // Comportamiento al pulsar la tecla TAB
 void ui_change_focus() {
     if (menu.has_focus) {
+        // si teniamos foco en menu, pasamos a search
         section_unset_focus(&menu);
-        content_add_line(center.content, "Cambiamos foco a search");
-        section_print(&center);
         section_set_focus(&search);
     } else if (search.has_focus) {
+        // si teniamos foco en search pasamos a center
         section_unset_focus(&search);
         section_set_focus(&center);
     } else if (center.has_focus) {
+        // si teniamos foco en center, volvemos a menu
         section_unset_focus(&center);
         section_set_focus(&menu);
     }
@@ -182,7 +183,8 @@ void ui_change_focus() {
 // la accion del usuario. Una vez el usuario pulsa alguna tecla
 // ejecutamos lo necesario y devolvemos la accion realizada
 // excepto en el caso de la busqueda, que nos quedamos en un bucle
-// hasta que el usuario pulse ENTER o TAB para salir del campo de busqueda
+// para capturar lo que el usuario escriba por teclado
+// hasta que el usuario pulse ENTER o TAB para salir
 ui_action_t ui_handle_input(char *return_value) {
     int pressed_key = 0;
 
@@ -227,14 +229,12 @@ ui_action_t ui_handle_input(char *return_value) {
         }
         // una vez fuera del bucle comprobamos si era ENTER o TAB
         if (pressed_key == 9) {
-            content_add_line(center.content, "No quieren buscar :(");
-            section_print(&center);
+            // con TAB cambiamos foco
             ui_change_focus();
             return UI_ACTION_CHANGE_FOCUS;
 
         } else if (pressed_key == 10) {
-            content_add_line(center.content, "Se pide una busqueda. Devolvemos UI_ACTION_SEARCH");
-            section_print(&center);
+            // con enter cambiamos foco Y devolvemos accion de SEARCH
             ui_change_focus();
             strcpy(return_value, search.content->text[0]);
             return UI_ACTION_SEARCH;
@@ -256,7 +256,12 @@ ui_action_t ui_handle_input(char *return_value) {
                 return UI_ACTION_CHANGE_FOCUS;
             case 10:
                 //ENTER
-                return UI_ACTION_SELECT;
+                // hay que reproducir la seleccion
+                // tenemos que devolver la ACTION que toque
+                // y el trackid lo pasamos en return_value
+                // de momento devolvemos el texto seleccionado
+                strcpy(return_value, center.content->text[center.selected_line-1]);
+                return UI_ACTION_PLAY;
             case 'q':
             case 'Q':
                 // Salimos
