@@ -1,6 +1,7 @@
+//deezer_api.h
 #ifndef DEEZER_API_H
 #define DEEZER_API_H
-#include "utils.h"
+#include "models.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
@@ -12,13 +13,6 @@ struct memory {
     char *memory;
     size_t size;
 };
-
-/****
- * DEEZER MODELS
- ****/
-typedef struct track_t track_t;
-typedef struct album_t album_t;
-typedef struct artist_t artist_t;
 
 struct track_t {
     int id; // id
@@ -44,6 +38,8 @@ struct artist_t {
     char *link; // link to deezer [url]
     char *tracklist; //api link to top of this artist [url]
 };
+
+
 
 void deezer_init();
 void deezer_cleanup();
