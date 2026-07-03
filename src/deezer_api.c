@@ -120,8 +120,8 @@ content_t* deezer_search(const char *query) {
                                     // convertimos a objeto track 
                                     track_t *trackp = deezer_convert_json_to_track(iterator);
                                     if (trackp != NULL) {
-                                        fprintf(stderr, "track: %s\n", trackp->title);
-                                        content_add_line(resp, trackp->title);
+                                        fprintf(stderr, "track: %s\n", trackp->preview);
+                                        content_add_line(resp, trackp->preview);
                                     }
                                     fprintf(stderr, "Vamos a liberar\n");
                                     deezer_track_free(trackp);
