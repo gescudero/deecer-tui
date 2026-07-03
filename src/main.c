@@ -7,32 +7,24 @@
 #include <stdio.h>
 #include <pthread.h>
 
-//funcion para el thread del player
-void* thread_player_openurl(void *arg) {
-    pthread_detach(pthread_self()); // el thread se limpia
-
-    char *url = (char*)arg; // casteamos el argumento
-    player_openurl(url);
-    return NULL;
-}
-
+void* thread_player_openurl(void *arg); 
 
 int main() {
     bool running = true;
     ui_action_t action;
     char ui_response[256];
     pthread_t player_thread;
-
+    
+    // init de la api y libcurl
     deezer_init();
 
-    // Seccion window curses
-    // init
+    // init de curses y la ui
     if (!ui_init()) {
         fprintf(stderr, "Error creado las ventanas.");
         return 1;
     }
 
-    //Inicializamos el player
+    // inicializamos el player (libmpv)
     if (!player_init()) {
         fprintf(stderr, "Error creando el player.");
         return 1;
@@ -56,27 +48,32 @@ int main() {
                     // seteamos el contenido
                     center_set_content(resp);
                     // liberamos la memoria de la respuesta y de nuestro buffer
-                    content_free(resp);
+                    fprintf(stderr, "Liberamos resp, el content_t que nos devuelve deezer_search");
+                    //content_free(resp);
                 }
                 break;
-                                   }
+            }
             case UI_ACTION_PLAY: {
                 // Nos piden reproducir un track
-                // ahora mismo recibimos una url para
-                // reproducir el preview de la api publica
-                content_t *preview_url = content_create(1);
-                content_add_line(preview_url, ui_response);
-                center_set_content(preview_url);
-                //test pthread basico
-                if (pthread_create(&player_thread, NULL, thread_player_openurl, (void*)preview_url->text[0]) != 0) {
-                    fprintf(stderr, "Error creando el thread\n");
+                // para ello conseguimos el content completo del center,
+                // aunque quizas seria mejor tener una variable global
+                // con el contenido y no necesitar pedirla (valorar)
+                content_t *center_content = content_create(1);
+                if (center_content == NULL) {
+                    fprintf(stderr, "Error creando center_content");
                 }
-                //player_openurl(preview_url->text[0]);
-                // damos un tiempo antes de liberar la memoria del content
-                napms(100);
-                content_free(preview_url);
+                // Ahora mismo pedimos el content y la linea seleccionada
+                int selected_line = center_get_selected_line_content(center_content);
+                // comprobamos que la linea seleccionada realmente sea un track,
+                // podria ser un texto cualquiera
+                if (content_line_is_track(center_content, selected_line-1)) {
+                    // ejecutamos la reproduccion en un thread aparte (parece que funciona!!)    
+                    if (pthread_create(&player_thread, NULL, thread_player_openurl, (void*)center_content->tracks[selected_line-1]->preview) != 0) {
+                        fprintf(stderr, "Error creando el thread\n");
+                    }
+                }
                 break;
-                                 }
+            }
             case UI_ACTION_QUIT:
                 running = false;
                 break;
@@ -86,8 +83,20 @@ int main() {
                 break;
         }
     }
+    // Rutinas de cerrado de la aplicacion 
+    pthread_cancel(player_thread);
     deezer_cleanup();
     player_end();
     ui_end();
     return 0;
+}
+
+//funcion para el thread del player
+void* thread_player_openurl(void *arg) {
+    pthread_detach(pthread_self()); // el thread se limpia
+
+    char *url = (char*)arg; // casteamos el argumento
+    fprintf(stderr, "[thread_player_openurl] - Pedimos reproducir %s\n", url);
+    player_openurl(url);
+    return NULL;
 }

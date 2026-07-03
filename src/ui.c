@@ -1,5 +1,7 @@
 #include "ui.h"
+#include "utils.h"
 #include <ncurses.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
@@ -258,8 +260,6 @@ ui_action_t ui_handle_input(char *return_value) {
                 //ENTER
                 // hay que reproducir la seleccion
                 // tenemos que devolver la ACTION que toque
-                // y el trackid lo pasamos en return_value
-                // de momento devolvemos el texto seleccionado
                 strcpy(return_value, center.content->text[center.selected_line-1]);
                 return UI_ACTION_PLAY;
             case 'q':
@@ -375,11 +375,19 @@ int center_create_window() {
     box(center.win, 0, 0);
 
     content_add_line(center.content, "Bienvenido a deecer <3");
+    char *tmp_str;
+    asprintf(&tmp_str, "Tamaño de panel. width:%d ; height:%d", center.width, center.height);
+    content_add_line(center.content, tmp_str);
     section_print(&center);
+    free(tmp_str);
 
     return 1;
 }
 void center_set_content(content_t *content) {
     content_copy(center.content, content);
     section_print(&center);
+}
+int center_get_selected_line_content(content_t *content) {
+    content_copy(content, center.content);
+    return center.selected_line;
 }

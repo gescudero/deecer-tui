@@ -1,6 +1,6 @@
 CC = gcc
 CFLAGS = -Wall -g
-LDFLAGS = -lncurses -ltinfo -lcurl -lcjson -lmpv
+LDFLAGS = -lncurses -ltinfo -lcurl -lcjson -lmpv -lpthread
 TARGET = deecer-tui
 
 SRC_DIR = src

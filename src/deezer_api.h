@@ -51,5 +51,12 @@ char* deezer_get_chart(int id);
 char* deezer_get_playlist(int id);
 char* deezer_get_track(int id);
 char* deezer_get_user();
+bool deezer_track_is_valid(track_t *track);
+bool deezer_artist_is_valid(artist_t *artist);
+bool deezer_album_is_valid(album_t *album); 
+void deezer_track_free(track_t *track);
+void deezer_artist_free(artist_t *artist);
+void deezer_album_free(album_t *album);
+
 
 #endif

@@ -1,5 +1,8 @@
 #include "utils.h"
+#include "deezer_api.h"
+#include "models.h"
 #include <stddef.h>
+#include <stdio.h>
 #include <stdlib.h>
 
 content_t* content_create(size_t content_size) {
@@ -19,13 +22,16 @@ void content_init(content_t *cont, size_t content_size) {
     // se configura maxlines
     cont->maxlines = content_size;
     // se reserva el espacio para el numero maximo de lineas de tipo char*
-    cont->text = malloc(cont->maxlines * sizeof(char*));
-    if (cont->text == NULL) {
+    // reservamos tambien espacio para los posibles punteros a tracks
+    cont->text = calloc(cont->maxlines, sizeof(char*));
+    cont->tracks = calloc(cont->maxlines, sizeof(track_t*));
+    if (cont->text == NULL || cont->tracks == NULL) {
         return;
     }
     // se ponen cada uno de esos espacios a NULL
     for (int i=0; i < cont->maxlines; i++) {
         cont->text[i] = NULL;  
+        cont->tracks[i] = NULL;
     }
     // se inicializa nuestro contador de contenido.
     cont->numlines = 0;
@@ -33,21 +39,25 @@ void content_init(content_t *cont, size_t content_size) {
 void content_add_line(content_t *cont, const char *texto){
     // comprobamos si tenemos memoria suficiente y si no 
     // tenemos ampliamos al doble del tamaño actual.
+    // añadimos tambien espacio para un posible puntero a track
     if (cont->numlines >= cont->maxlines) {
         // creamos un puntero temporal por si nos falla realloc
         size_t old_max = cont->maxlines;
         size_t new_max = old_max == 0 ? 1 : old_max * 2;
         char **temp_text = realloc(cont->text, new_max * sizeof(char*));
-        if ( temp_text == NULL) {
+        track_t **temp_tracks = realloc(cont->tracks, new_max * sizeof(track_t*));
+        if ( temp_text == NULL || temp_tracks == NULL) {
             return;
         }
         // si realloc ha podido reservar el espacio asignamos ese
         // puntero a nuestro puntero text y inicializamos a NULL los 
         // nuevos espacios
         cont->text = temp_text;
+        cont->tracks = temp_tracks;
         for (int i = old_max; i < new_max; i++ )
         {
             cont->text[i] = NULL;
+            cont->tracks[i] = NULL;
         }
         // Ahora ya podemos validar el nuevo numero de maxlines
         cont->maxlines = new_max;
@@ -110,6 +120,32 @@ void content_add_char(content_t *cont, int line_index, const char c) {
     cont->numlines = line_index + 1;
 
 };
+void content_add_track(content_t *cont, track_t *track) {
+    // guardamos la linea donde queremos insertar el track
+    int index = cont->numlines;
+    // Solo añadimos contenido si nos han pasado un track valido
+    if (deezer_track_is_valid(track)) {
+        char *tmp_text;
+        asprintf(&tmp_text, "%s (%s)", track->title, track->artist->name) ;
+        content_add_line(cont, tmp_text);
+        cont->tracks[index] = track;
+   }
+}
+bool content_line_is_track(const content_t *cont, int line_index) {
+    if (line_index >= cont->maxlines) {
+        return false;
+    }
+    if (cont->tracks == NULL) {
+        return false;
+    }
+    if (cont->tracks[line_index] == NULL) {
+        return false;
+    }
+    if (!deezer_track_is_valid(cont->tracks[line_index])) {
+        return false;
+    }
+    return true;
+}
 // substituimos el contenido de nuestra estructura destino por 
 // el contenido de la estructura origen
 void content_copy(content_t *dest, const content_t *origin) {
@@ -125,7 +161,11 @@ void content_copy(content_t *dest, const content_t *origin) {
 void content_add(content_t *dest, const content_t *addition) {
     // copiamos linea a linea
     for (int i= 0; i<addition->numlines; i++) {
-        content_add_line(dest, addition->text[i]);
+        if (content_line_is_track(addition, i)) {
+            content_add_track(dest, addition->tracks[i]);
+        } else {
+            content_add_line(dest, addition->text[i]);
+        }
     }
 }
 
@@ -147,11 +187,21 @@ void content_clear(content_t *cont) {
             free(cont->text[i]);
             cont->text[i] = NULL;
         }
+        if (cont->tracks[i] != NULL) {
+            deezer_track_free(cont->tracks[i]);
+            cont->tracks[i] = NULL;
+        }
     }
     // liberamos el espacio de content->text
-    free(cont->text);
+    if (cont->text != NULL) {
+        free(cont->text);
+    }
+    if (cont->tracks != NULL) {
+        free(cont->tracks);
+    }
     // seteamos content->text a NULL
     cont->text = NULL;
+    cont->tracks = NULL;
     // reinciamos el contador de lineas escritas
     cont->numlines = 0;
     // seteamos a 0 el maximo de lineas

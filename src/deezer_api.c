@@ -1,6 +1,7 @@
 #include "deezer_api.h"
 #include "models.h"
 #include "utils.h"
+#include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
 #include <cjson/cJSON.h>
@@ -16,10 +17,6 @@ static size_t writecallback(char *contents, size_t size, size_t nmemb, void *use
 static track_t* deezer_convert_json_to_track(cJSON *json_track);
 static artist_t* deezer_convert_json_to_artist(cJSON *json_artist);
 static album_t* deezer_convert_json_to_album(cJSON *json_album);
-static void deezer_track_free(track_t *track);
-static void deezer_artist_free(artist_t *artist);
-static void deezer_album_free(album_t *album);
-
 void deezer_init() {
     // Inicializacion global recomendable, no tengo muy claro que hace
     curl_global_init(CURL_GLOBAL_ALL);
@@ -116,15 +113,15 @@ content_t* deezer_search(const char *query) {
                                 //Hemos recibido un array, vamos bien
                                 cJSON *iterator = NULL;
                                 cJSON_ArrayForEach(iterator, data) {
-                                    fprintf(stderr, "Vamos a convertir el json a track\n");
                                     // convertimos a objeto track 
                                     track_t *trackp = deezer_convert_json_to_track(iterator);
                                     if (trackp != NULL) {
-                                        fprintf(stderr, "track: %s\n", trackp->preview);
-                                        content_add_line(resp, trackp->preview);
+                                        //fprintf(stderr, "track: %s\n", trackp->preview);
+                                        //content_add_line(resp, trackp->preview);
+                                        content_add_track(resp, trackp);
                                     }
-                                    fprintf(stderr, "Vamos a liberar\n");
-                                    deezer_track_free(trackp);
+                                    //fprintf(stderr, "Vamos a liberar\n");
+                                    //deezer_track_free(trackp);
                                 }
                             }
                         }
@@ -135,6 +132,7 @@ content_t* deezer_search(const char *query) {
                     asprintf(&text, "Hemos recibido Content-Type: %s\n"
                             "Esperabamos otra cosa\n", contenttype);
                     content_add_line(resp, text);
+                    fprintf(stderr, "Liberamos text, un char* que hemos creado en deezer_search para concatenar\n");
                     free(text);
                 }
             } else {
@@ -212,7 +210,6 @@ static track_t* deezer_convert_json_to_track(cJSON *json_track) {
     if (cJSON_IsString(track_token)) {
         track->track_token = strdup(track_token->valuestring);
     }
-    fprintf(stderr, "json_track: %p; json_artist: %p; json_album: %p\n", track, track->artist, track->album);
     return track;
 }
 
@@ -263,7 +260,55 @@ static album_t* deezer_convert_json_to_album(cJSON *json_album) {
     }
     return album;
 }
-static void deezer_track_free(track_t *track) {
+bool deezer_track_is_valid(track_t *track) {
+    if (track == NULL) {
+        return false;
+    }
+    if (track->id < 1) {
+        return false;
+    }
+    if (track->title == NULL) {
+        return false;
+    }
+    if (track->title[0] == '\0') {
+        return false;
+    }
+    if (!deezer_artist_is_valid(track->artist) || !deezer_album_is_valid(track->album)) {
+        return false;
+    }
+    return true;
+}
+bool deezer_artist_is_valid(artist_t *artist) {
+    if (artist == NULL) {
+        return false;
+    }
+    if (artist->id < 1) {
+        return false;
+    }
+    if (artist->name == NULL) {
+        return false;
+    }
+    if (artist->name[0] == '\0') {
+        return false;
+    }
+    return true;
+}
+bool deezer_album_is_valid(album_t *album) {
+    if (album == NULL) {
+        return false;
+    }
+    if (album->id < 1) {
+        return false;
+    }
+    if (album->title == NULL) {
+        return false;
+    }
+    if (album->title[0] == '\0') {
+        return false;
+    }
+    return true;
+}
+void deezer_track_free(track_t *track) {
     fprintf(stderr, "Entramos en track free. %p\n", track);
     if (track == NULL) {
         return;
@@ -293,7 +338,7 @@ static void deezer_track_free(track_t *track) {
     free(track);
     track = NULL;
 }
-static void deezer_artist_free(artist_t *artist) {
+void deezer_artist_free(artist_t *artist) {
     fprintf(stderr, "Entramos en artist free. %p\n", artist);
     if (artist == NULL) {
         return;
@@ -313,7 +358,7 @@ static void deezer_artist_free(artist_t *artist) {
     free(artist);
     artist = NULL;
 }
-static void deezer_album_free(album_t *album) {
+void deezer_album_free(album_t *album) {
     fprintf(stderr, "Entramos en album free. %p\n", album);
     if (album == NULL) {
         return;

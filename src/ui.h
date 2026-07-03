@@ -50,5 +50,5 @@ void search_set_focus();
 
 int center_create_window();
 void center_set_content(content_t *content);
-
+int center_get_selected_line_content(content_t *content);
 #endif
