@@ -1,16 +1,24 @@
 #include "deezer_api.h"
+#include "models.h"
 #include "utils.h"
 #include <stdio.h>
 #include <string.h>
 #include <cjson/cJSON.h>
 
 // el objeto curl, el manejador del cotarro
-CURL *curl_handle;
+static CURL *curl_handle;
 // objeto que contiene la respuesta (OK, ERROR, ETC)
-CURLcode curl_res;
+static CURLcode curl_res;
 // funcion callback necesaria para curl, es con la que recibimos los datos
 // a pesar de llamarse write, en realidad seria lo que leemos nosotros
 static size_t writecallback(char *contents, size_t size, size_t nmemb, void *userp);
+// funcion para convertir un objeto json track a un track_t
+static track_t* deezer_convert_json_to_track(cJSON *json_track);
+static artist_t* deezer_convert_json_to_artist(cJSON *json_artist);
+static album_t* deezer_convert_json_to_album(cJSON *json_album);
+static void deezer_track_free(track_t *track);
+static void deezer_artist_free(artist_t *artist);
+static void deezer_album_free(album_t *album);
 
 void deezer_init() {
     // Inicializacion global recomendable, no tengo muy claro que hace
@@ -108,19 +116,15 @@ content_t* deezer_search(const char *query) {
                                 //Hemos recibido un array, vamos bien
                                 cJSON *iterator = NULL;
                                 cJSON_ArrayForEach(iterator, data) {
-                                    cJSON *title = cJSON_GetObjectItem(iterator, "title");
-                                    cJSON *artist = cJSON_GetObjectItem(iterator, "artist");
-                                    if (cJSON_IsString(title) && cJSON_IsObject(artist)) {
-                                        cJSON *artist_name = cJSON_GetObjectItem(artist, "Name");
-                                        if (cJSON_IsString(artist_name)) {
-                                            char *tmp_str;
-                                            asprintf(&tmp_str, "%s:%s", artist_name->valuestring, title->valuestring);
-                                            content_add_line(resp, tmp_str);
-                                            free(tmp_str);
-                                        } else {
-                                            content_add_line(resp, title->valuestring);
-                                        }
+                                    fprintf(stderr, "Vamos a convertir el json a track\n");
+                                    // convertimos a objeto track 
+                                    track_t *trackp = deezer_convert_json_to_track(iterator);
+                                    if (trackp != NULL) {
+                                        fprintf(stderr, "track: %s\n", trackp->title);
+                                        content_add_line(resp, trackp->title);
                                     }
+                                    fprintf(stderr, "Vamos a liberar\n");
+                                    deezer_track_free(trackp);
                                 }
                             }
                         }
@@ -170,4 +174,162 @@ static size_t writecallback(char *contents, size_t size, size_t nmemb, void *use
     return realsize;
 }
 
+static track_t* deezer_convert_json_to_track(cJSON *json_track) {
+    track_t *track = calloc(1, sizeof(track_t));
+    if (track == NULL) {
+        return NULL;
+    }
+    cJSON *id = cJSON_GetObjectItem(json_track, "id");
+    cJSON *title = cJSON_GetObjectItem(json_track, "title");
+    cJSON *title_short = cJSON_GetObjectItem(json_track, "title_short");
+    cJSON *artist = cJSON_GetObjectItem(json_track, "artist");
+    cJSON *album = cJSON_GetObjectItem(json_track, "album");
+    cJSON *preview = cJSON_GetObjectItem(json_track, "preview");
+    cJSON *track_token = cJSON_GetObjectItem(json_track, "track_token");
 
+    if (cJSON_IsNumber(id)) {
+        track->id = id->valueint;
+    }
+    if (cJSON_IsString(title)) {
+        track->title = strdup(title->valuestring);
+    }
+    if (cJSON_IsString(title_short)) {
+        track->title_short = strdup(title_short->valuestring);
+    }
+    if (cJSON_IsObject(artist)) {
+        track->artist = deezer_convert_json_to_artist(artist);
+    } else {
+        track->artist = NULL;
+    }
+    if (cJSON_IsObject(album)) {
+        track->album = deezer_convert_json_to_album(album);
+    } else {
+        track->album = NULL;
+    }
+    if (cJSON_IsString(preview)) {
+        track->preview = strdup(preview->valuestring);
+    }
+    if (cJSON_IsString(track_token)) {
+        track->track_token = strdup(track_token->valuestring);
+    }
+    fprintf(stderr, "json_track: %p; json_artist: %p; json_album: %p\n", track, track->artist, track->album);
+    return track;
+}
+
+static artist_t* deezer_convert_json_to_artist(cJSON *json_artist) {
+    artist_t *artist = calloc(1, sizeof(artist_t));
+    if (artist == NULL) {
+        return NULL;
+    }
+    cJSON *id = cJSON_GetObjectItem(json_artist, "id");
+    cJSON *name = cJSON_GetObjectItem(json_artist, "name");
+    cJSON *link = cJSON_GetObjectItem(json_artist, "link");
+    cJSON *tracklist = cJSON_GetObjectItem(json_artist, "tracklist");
+    if (cJSON_IsNumber(id)) {
+        artist->id = id->valueint;
+    }
+    if (cJSON_IsString(name)) {
+        artist->name = strdup(name->valuestring);
+    }
+    if (cJSON_IsString(link)) {
+        artist->link = strdup(link->valuestring);
+    }
+    if (cJSON_IsString(tracklist)) {
+        artist->tracklist = strdup(tracklist->valuestring);
+    }
+ 
+    return artist;
+}
+static album_t* deezer_convert_json_to_album(cJSON *json_album) {
+    album_t *album = calloc(1, sizeof(album_t));
+    if (album == NULL) {
+        return NULL;
+    }
+    cJSON *id = cJSON_GetObjectItem(json_album, "id");
+    cJSON *title = cJSON_GetObjectItem(json_album, "title");
+    cJSON *md5_image = cJSON_GetObjectItem(json_album, "md5_image");
+    cJSON *tracklist = cJSON_GetObjectItem(json_album, "tracklist");
+    if (cJSON_IsNumber(id)) {
+        album->id = id->valueint;
+    }
+    if (cJSON_IsString(title)) {
+        album->title = strdup(title->valuestring);
+    }
+    if (cJSON_IsString(md5_image)) {
+        album->md5_image = strdup(md5_image->valuestring);
+    }
+    if (cJSON_IsString(tracklist)) {
+        album->tracklist = strdup(tracklist->valuestring);
+    }
+    return album;
+}
+static void deezer_track_free(track_t *track) {
+    fprintf(stderr, "Entramos en track free. %p\n", track);
+    if (track == NULL) {
+        return;
+    }
+    if (track->title) {
+        free(track->title);
+        track->title = NULL;
+    }
+    if (track->title_short) {
+        free(track->title_short);
+        track->title_short = NULL;
+    }
+    if (track->track_token) {
+        free(track->track_token);
+        track->track_token = NULL;
+    }
+    if (track->preview) {
+        free(track->preview);
+        track->preview = NULL;
+    }
+    if (track->artist) {
+        deezer_artist_free(track->artist);
+    }
+    if (track->album) {
+        deezer_album_free(track->album);
+    }
+    free(track);
+    track = NULL;
+}
+static void deezer_artist_free(artist_t *artist) {
+    fprintf(stderr, "Entramos en artist free. %p\n", artist);
+    if (artist == NULL) {
+        return;
+    }
+    if (artist->name) {
+        free(artist->name);
+        artist->name = NULL;
+    }
+    if (artist->link) {
+        free(artist->link);
+        artist->link = NULL;
+    }
+    if (artist->tracklist) {
+        free(artist->tracklist);
+        artist->tracklist = NULL;
+    }
+    free(artist);
+    artist = NULL;
+}
+static void deezer_album_free(album_t *album) {
+    fprintf(stderr, "Entramos en album free. %p\n", album);
+    if (album == NULL) {
+        return;
+    }
+    if (album->title) {
+        free(album->title);
+        album->title = NULL;
+    }
+    if (album->md5_image) {
+        free(album->md5_image);
+        album->md5_image = NULL;
+    }
+    if (album->tracklist) {
+        free(album->tracklist);
+        album->tracklist = NULL;
+    }
+    free(album);
+    album = NULL;
+}

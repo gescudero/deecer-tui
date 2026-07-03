@@ -22,21 +22,22 @@ struct track_t {
     artist_t *artist; // Artist object
     album_t *album; // Album object
     char *preview; // link to preview [url]
+    char *track_token; // token for media service
 };
 
 struct album_t {
     int id; // id
     char *title; // title of album
-    int nb_tracks; // number of tracks
-    artist_t *artist; // artist object
-    track_t **tracks; // list of track objects
+    char *md5_image; // id de la imagen (se pueden construir las url de descarga)
+    char *tracklist; // enlace a la lista de tracks https://api.deezer.com/album/<id>/tracks
 };
 
 struct artist_t {
     int id; // id
     char *name; // name
-    char *link; // link to deezer [url]
+    char *link; // https://www.deezer.com/artist/<id>
     char *tracklist; //api link to top of this artist [url]
+                     //https://api.deezer.com/artist/<id>/top?limit=50
 };
 
 
