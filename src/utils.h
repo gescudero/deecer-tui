@@ -7,6 +7,8 @@
 
 // Estructura basica para textos
 // con control de lineas
+// puede contener track en cada linea individualmente
+// también podrá contener playlist
 struct content_t {
     char **text;
     size_t numlines;

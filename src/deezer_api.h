@@ -6,14 +6,12 @@
 #include <string.h>
 #include <stdbool.h>
 #include <curl/curl.h>
-/****
- *  LIBCURL
- ***/
+ // LIBCURL struct for receiving response
 struct memory {
     char *memory;
     size_t size;
 };
-
+// DEEZER OBJECTS
 struct track_t {
     int id; // id
     bool readable; // is readable on device
@@ -40,7 +38,14 @@ struct artist_t {
                      //https://api.deezer.com/artist/<id>/top?limit=50
 };
 
-
+struct playlist_t {
+    int id; // id
+    char *title; // title 
+    char *description; // descripcion
+    char *link; // link en deezer 
+    int nb_tracks; // numero de tracks en la playlist
+    track_t **tracks; // array de punteros a tracks;
+};
 
 void deezer_init();
 void deezer_cleanup();
@@ -57,6 +62,5 @@ bool deezer_album_is_valid(album_t *album);
 void deezer_track_free(track_t *track);
 void deezer_artist_free(artist_t *artist);
 void deezer_album_free(album_t *album);
-
 
 #endif
