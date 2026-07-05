@@ -22,7 +22,6 @@ void content_add_line(content_t *cont, const char *texto);
 void content_add_char(content_t *cont, int line_index, const char c);
 void content_add_track(content_t *cont, track_t *track);
 bool content_line_is_track(const content_t *cont, int line_index);
-void content_copy(content_t *dest, const content_t *origin);
 void content_add(content_t *dest, const content_t *addition);
 void content_clear(content_t *cont);
 void content_free(content_t *cont);

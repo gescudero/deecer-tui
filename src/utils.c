@@ -146,16 +146,6 @@ bool content_line_is_track(const content_t *cont, int line_index) {
     }
     return true;
 }
-// substituimos el contenido de nuestra estructura destino por 
-// el contenido de la estructura origen
-void content_copy(content_t *dest, const content_t *origin) {
-    // liberamos del anterior contenido
-    content_clear(dest);
-    // inicializamos con el tamaño del nuevo
-    content_init(dest, origin->numlines);
-    // le añadimos el contenido
-    content_add(dest, origin);
-}
 // añadimos todo el contenido de addition a la 
 // estructura destino
 void content_add(content_t *dest, const content_t *addition) {
