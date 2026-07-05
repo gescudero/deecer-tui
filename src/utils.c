@@ -69,8 +69,8 @@ void content_add_line(content_t *cont, const char *texto){
 };
 void content_add_char(content_t *cont, int line_index, const char c) {
     // Evitamos escribir algunos caracteres no imprimibles
-    // de momento filtramos \n y \t
-    if (c == 10 || c == 13 || c == 9) {
+    // evitamos el 7 porque lo necesitamos luego (es backspace)
+    if (32 > c && c != 7) {
         return;
     }
     // comprobamos que line_index no supere maxlines, si es asi
@@ -109,12 +109,23 @@ void content_add_char(content_t *cont, int line_index, const char c) {
     if (temp_line == NULL) {
         return;
     }
-
-    // creamos el espacio de memoria para poder añadir caracteres
+     // creamos el espacio de memoria para poder añadir caracteres
     cont->text[line_index] = temp_line;
-    // añadimos el caracter en el indice que toca
-    cont->text[line_index][len] = c;
-    // añadimos el carecter de terminacion del string
+   
+    // comprobamos que no hayan pulsado backspace o delete, si es asi
+    // seteamos el final de la cadena en el caracter anterior a len 
+    // y retornamos (usamos supr igual que backspace)
+    if (c == 7 || c == 74) {
+        // restamos dos a len, de esa forma quitamos un caracter
+        // en el momento que ejecutamos la siguiente linea despues
+        // de este if
+        len -= 2;
+    } else {
+        // añadimos el caracter en el indice que toca
+        cont->text[line_index][len] = c;
+    }
+
+    // añadimos el caracter de terminacion del string
     cont->text[line_index][len+1] = '\0';
     // pasamos a la linea siguiente para estar preparado.
     cont->numlines = line_index + 1;

@@ -48,6 +48,8 @@ content_t* deezer_search(const char *query) {
         // Mediante setopt vamos configurando nuestra peticion
         // 1. le damos la url
         char *url = NULL;
+        //limpiamos de espacios o caracteres no aceptados en urls
+        //mediante la funcion curl_easy_escape
         asprintf(&url, "https://api.deezer.com/search?q=%s", 
                         curl_easy_escape(curl_handle, query, 0));
         fprintf(stderr, "url: %s\n", url);
