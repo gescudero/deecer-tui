@@ -1,3 +1,4 @@
+//ui.h
 #ifndef UI_H
 #define UI_H
 
@@ -36,20 +37,11 @@ typedef enum {
     UI_PLAYER_FORWARD,
 } ui_player_button_t;
 
-void section_print(section_t *sec);
-int section_getch(section_t *sec);
-void section_delwin(section_t *sec);
-void section_next_option(section_t *sec);
-void section_prev_option(section_t *sec);
-void section_set_focus(section_t *sec);
-void section_unset_focus(section_t *sec);
-const char* section_get_selected_value(section_t *sec);
-
 bool ui_init();
 void ui_end();
 ui_action_t ui_handle_input(char *return_value);
 
 void center_set_content(content_t *content);
-int center_get_selected_line_content(content_t *content);
+int center_get_selected_line_content(content_t **content);
 
 #endif

@@ -52,14 +52,11 @@ int main() {
             case UI_ACTION_PLAY: {
                 // Nos piden reproducir un track
                 // para ello conseguimos el content completo del center,
-                // aunque quizas seria mejor tener una variable global
-                // con el contenido y no necesitar pedirla (valorar)
-                content_t *center_content = content_create(1);
-                if (center_content == NULL) {
-                    fprintf(stderr, "Error creando center_content\n");
-                }
+                // Creamos un puntero y lo pasamos para que nos escriban ahi
+                // la direccion de memoria al contenido y nos den la linea seleccionada
+                content_t *center_content;
                 // Ahora mismo pedimos el content y la linea seleccionada
-                int selected_line = center_get_selected_line_content(center_content);
+                int selected_line = center_get_selected_line_content(&center_content);
                 // comprobamos que la linea seleccionada realmente sea un track,
                 // podria ser un texto cualquiera
                 if (content_line_is_track(center_content, selected_line-1)) {
