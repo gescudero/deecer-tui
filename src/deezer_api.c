@@ -1,6 +1,8 @@
 #include "deezer_api.h"
 #include "models.h"
 #include "utils.h"
+#include <curl/curl.h>
+#include <curl/easy.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
@@ -46,7 +48,11 @@ content_t* deezer_search(const char *query) {
         // Mediante setopt vamos configurando nuestra peticion
         // 1. le damos la url
         char *url = NULL;
-        asprintf(&url, "https://api.deezer.com/search?q=%s", query);
+        asprintf(&url, "https://api.deezer.com/search?q=%s", 
+                        curl_easy_escape(curl_handle, query, 0));
+        fprintf(stderr, "url: %s\n", url);
+        //char *url = curl_easy_escape(curl_handle, rawurl, 0);
+        //fprintf(stderr, "clean url: %s\n", url);
         curl_easy_setopt(curl_handle, CURLOPT_URL, url); 
         // 2. le pasamos nuestra funcion de callback para que nos responda
         curl_easy_setopt(curl_handle, CURLOPT_WRITEFUNCTION, writecallback);
