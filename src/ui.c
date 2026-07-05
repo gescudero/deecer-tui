@@ -1,11 +1,20 @@
 #include "ui.h"
 #include "utils.h"
-#include <ncurses.h>
+#include <locale.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
+#include <wchar.h>
 
+// Private functions
+static void ui_start_colors();
+static void ui_change_focus();
+static int menu_create_window();
+static int search_create_window();
+static void search_init_text();
+static int center_create_window();
+static int player_create_window();
 /*************
  *  HELPERS
  ************/

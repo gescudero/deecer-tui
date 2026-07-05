@@ -2,7 +2,7 @@
 #define UI_H
 
 #include "utils.h"
-#include <ncurses.h>
+#include <ncursesw/curses.h>
 
 #define MARGIN 1 //Valor margenes entre ventanas y con el borde de la ventana
 
@@ -27,6 +27,15 @@ typedef enum {
     UI_ACTION_CHANGE_FOCUS
 } ui_action_t;
 
+typedef enum {
+    UI_PLAYER_NONE,
+    UI_PLAYER_BACK,
+    UI_PLAYER_STOP,
+    UI_PLAYER_PLAY,
+    UI_PLAYER_PAUSE,
+    UI_PLAYER_FORWARD,
+} ui_player_button_t;
+
 void section_print(section_t *sec);
 int section_getch(section_t *sec);
 void section_delwin(section_t *sec);
@@ -38,17 +47,9 @@ const char* section_get_selected_value(section_t *sec);
 
 bool ui_init();
 void ui_end();
-void ui_start_colors();
-void ui_change_focus();
 ui_action_t ui_handle_input(char *return_value);
 
-int menu_create_window();
-
-int search_create_window();
-void search_init_text();
-void search_set_focus();
-
-int center_create_window();
 void center_set_content(content_t *content);
 int center_get_selected_line_content(content_t *content);
+
 #endif

@@ -3,7 +3,6 @@
 #include "player.h"
 #include "deezer_api.h"
 #include <cjson/cJSON.h>
-#include <ncurses.h>
 #include <stdio.h>
 #include <pthread.h>
 
@@ -47,9 +46,6 @@ int main() {
                 if (resp != NULL) {
                     // seteamos el contenido
                     center_set_content(resp);
-                    // liberamos la memoria de la respuesta y de nuestro buffer
-                    fprintf(stderr, "Liberamos resp, el content_t que nos devuelve deezer_search");
-                    //content_free(resp);
                 }
                 break;
             }
@@ -60,7 +56,7 @@ int main() {
                 // con el contenido y no necesitar pedirla (valorar)
                 content_t *center_content = content_create(1);
                 if (center_content == NULL) {
-                    fprintf(stderr, "Error creando center_content");
+                    fprintf(stderr, "Error creando center_content\n");
                 }
                 // Ahora mismo pedimos el content y la linea seleccionada
                 int selected_line = center_get_selected_line_content(center_content);
