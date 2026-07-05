@@ -1,6 +1,7 @@
 #include "ui.h"
 #include "utils.h"
 #include <locale.h>
+#include <ncursesw/curses.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -27,8 +28,14 @@ static section_t player = {0};
 *
 *****************/
 //ui 
+static void ui_init_content();
+static bool ui_init_windows();
+static void ui_end_windows();
+static void ui_end_content();
 static void ui_start_colors();
+static void ui_full_refresh();
 static void ui_change_focus();
+static bool ui_console_changed_size();
 //section 
 static void section_print(section_t *sec);
 static int section_getch(section_t *sec); 
@@ -40,13 +47,17 @@ static void section_unset_focus(section_t *sec);
 static const char* section_get_selected_value(section_t *sec); 
 //menu 
 static int menu_create_window();
+static void menu_create_content();
 //search 
 static int search_create_window();
+static void search_create_content();
 static void search_init_text();
 //center 
 static int center_create_window();
+static void center_create_content();
 //player 
 static int player_create_window();
+static void player_create_content();
 
 /*******************
  *
@@ -72,43 +83,37 @@ static int player_create_window();
 static void section_print(section_t *sec) {
     // borramos el contenido que hubiera en pantalla
     werase(sec->win);
-    // caso especial para la ventana de busqueda
-    // si tenemos el foco en search cambiamos el color 
-    // del borde de la ventana, en cualquier otro caso
-    // creamos el box estandard
-    //if (strcmp(sec->name, "search") == 0 && sec->has_focus) {
+    // si tenemos el foco, cambiamos el color del borde 
     if (sec->has_focus) {
         wattron(sec->win, COLOR_PAIR(1));
         box(sec->win, 0, 0);
         wattroff(sec->win, COLOR_PAIR(1));
-        //sec->selected_line = 0;
     } else {
         box(sec->win, 0, 0);
     }
     // padding del texto
     int x = 2;
     int y = 1;
-    // contador de lineas
+    // contador de lineas (del content_t)
     int i = 0;
-    // si tenemos mas lineas de las que caben seteamos el inicio 
-    // de forma que la ultima linea impresa sea la ultima 
-    // (util si estamos bajando o imprimiendo mientras llegan datos
-    // pero no es util cuando le pongamos un monton de datos en los 
-    // que hay que navegar) SOLO SI NO ES PLAYER
-    if (strcmp(sec->name, "player") != 0 && sec->content->numlines > sec->height - 2) {
-        i = sec->content->numlines - (sec->height - 2);
+    // hemos seleccionado una linea que no cabe, entonces vamos moviendo 
+    // la primera linea que imprimimos, de forma que creamos el scroll
+    if (strcmp(sec->name, "player") != 0 &&sec->selected_line > sec->height -2) {
+        i = (sec->selected_line - (sec->height - 2));
     }
     // imprimimos linea a linea y pintamos diferente 
     // la linea seleccionada
     for (; i<sec->content->numlines; ++i) {
-        if (sec->selected_line == i+1) {
-            wattron(sec->win, A_REVERSE);
-            mvwprintw(sec->win, y, x, "%s", sec->content->text[i]);
-            wattroff(sec->win, A_REVERSE);
-        } else {
-            mvwprintw(sec->win, y, x, "%s", sec->content->text[i]);
+        if (y < (sec->height - 1)) {
+            if (sec->selected_line == i+1) {
+                wattron(sec->win, A_REVERSE);
+                mvwprintw(sec->win, y, x, "%s", sec->content->text[i]);
+                wattroff(sec->win, A_REVERSE);
+            } else {
+                mvwprintw(sec->win, y, x, "%s", sec->content->text[i]);
+            }
         }
-        // player escribe en horizontal, el resto en vertical
+       // player escribe en horizontal, el resto en vertical
         if (strcmp(sec->name, "player") == 0 ) {
             x += strlen(sec->content->text[i]) + 2;
         } else {
@@ -125,6 +130,7 @@ static int section_getch(section_t *sec) {
 // Delete win
 static void section_delwin(section_t *sec) {
     if (sec->win != NULL) {
+        werase(sec->win);
         delwin(sec->win);
     }
 }
@@ -190,8 +196,14 @@ static const char* section_get_selected_value(section_t *sec) {
  *
  ************/
 // Inicializacion de ncurses y nuestras ventanas
-bool ui_init() {
-    // funciones de inicializacion de ncurses
+static void ui_init_content() {
+    menu_create_content();
+    search_create_content();
+    center_create_content();
+    player_create_content();
+}
+static bool ui_init_windows() {
+// funciones de inicializacion de ncurses
     setlocale(LC_ALL, "");
     setlocale(LC_NUMERIC, "C");
     initscr();
@@ -200,6 +212,7 @@ bool ui_init() {
     curs_set(0);
     ui_start_colors();
     keypad(stdscr, FALSE);
+    werase(stdscr);
     refresh();
     // dimensiones de la pantalla
     getmaxyx(stdscr, screen_height, screen_width);
@@ -222,9 +235,18 @@ bool ui_init() {
     }
 
     return true;
+
+}
+bool ui_init() {
+    ui_init_content();
+    return ui_init_windows();
 }
 // Destruccion de la UI
 void ui_end() {
+    ui_end_windows();
+    ui_end_content();
+}
+static void ui_end_windows() {
     section_delwin(&menu);
     section_delwin(&search);
     section_delwin(&center);
@@ -232,10 +254,20 @@ void ui_end() {
     clrtoeol();
     endwin();
 }
+static void ui_end_content() {
+
+}
 // Inicializacion de los pares de colores
 static void ui_start_colors() {
     start_color();
     init_pair(1, COLOR_CYAN, COLOR_BLACK);
+}
+// Full refresh
+static void ui_full_refresh() {
+    fprintf(stderr, "Limpieza de ventanas radical\n");
+    ui_end_windows();
+    ui_init_windows();
+
 }
 // Cambio de foco de ventana. 
 // Comportamiento al pulsar la tecla TAB
@@ -257,6 +289,21 @@ static void ui_change_focus() {
         section_set_focus(&menu);
     }
 }
+
+static bool ui_console_changed_size() {
+    int new_height;
+    int new_width;
+    
+    getmaxyx(stdscr, new_height, new_width);
+
+    if (new_height != screen_height || new_width != screen_width) {
+        fprintf(stderr, "Han cambiado las dimensiones %dx%d\n", new_width, new_height);
+        screen_width = new_width;
+        screen_height = new_height;
+        return true;
+    }
+    return false;
+}
 // Funcion que se ejecuta en el bucle principal y que espera 
 // la accion del usuario. Una vez el usuario pulsa alguna tecla
 // ejecutamos lo necesario y devolvemos la accion realizada
@@ -264,6 +311,11 @@ static void ui_change_focus() {
 // para capturar lo que el usuario escriba por teclado
 // hasta que el usuario pulse ENTER o TAB para salir
 ui_action_t ui_handle_input(char *return_value) {
+    // Primero comprobamos si la terminal ha cambiado de tamaño.
+    if (ui_console_changed_size()) {
+        //redraw everything
+        ui_full_refresh();
+    }
     int pressed_key = 0;
 
     if (menu.has_focus) {   // Acciones en la ventana de menu
@@ -385,7 +437,16 @@ ui_action_t ui_handle_input(char *return_value) {
  *  menu section functions
  *
  *************/
-
+static void menu_create_content() {
+     // contenido
+    menu.has_focus = true; // el foco al iniciar la app es en el menu
+    menu.selected_line = 1; // preseleccionamos la primera linea
+    menu.content = content_create(5); // inicializamos el contenido y le reservamos espacio para 5 lineas
+    content_add_line(menu.content, "Home");
+    content_add_line(menu.content, "Explore");
+    content_add_line(menu.content, "Library");
+    content_add_line(menu.content, "Settings");
+}
 static int menu_create_window() {
     menu.name = "name";
     menu.height = 6;
@@ -400,15 +461,6 @@ static int menu_create_window() {
     box(menu.win, 0, 0);
     keypad(menu.win, TRUE);
 
-    // contenido
-    menu.has_focus = true; // el foco al iniciar la app es en el menu
-    menu.selected_line = 1; // preseleccionamos la primera linea
-    menu.content = content_create(5); // inicializamos el contenido y le reservamos espacio para 5 lineas
-    content_add_line(menu.content, "Home");
-    content_add_line(menu.content, "Explore");
-    content_add_line(menu.content, "Library");
-    content_add_line(menu.content, "Settings");
-    
     section_print(&menu);
     return 1; // devolvemos OK
 }
@@ -418,6 +470,12 @@ static int menu_create_window() {
  * search section functions
  *
  *************/
+static void search_create_content() {
+     // Contenido 
+    search.has_focus = false; // no tenemos el foco al inicial la app
+    search.selected_line = 0; // en esta ventana no se usa el campo selected_line
+    search.content = content_create(2); // inicializamos la memoria con 2 lineas de maximo.
+}
 static int search_create_window() {
     search.name = "search";
     search.height = 3;
@@ -433,12 +491,7 @@ static int search_create_window() {
     box(search.win, 0, 0);
     wrefresh(search.win);
 
-    // Contenido 
-    search.has_focus = false; // no tenemos el foco al inicial la app
-    search.selected_line = 0; // en esta ventana no se usa el campo selected_line
-    search.content = content_create(2); // inicializamos la memoria con 2 lineas de maximo.
     search_init_text(); // inicializamos el texto
-
     return 1;
 }
 static void search_init_text() {
@@ -467,24 +520,32 @@ static int center_create_window() {
         return 0;
     }
 
-    // contenido
+    box(center.win, 0, 0);
+
+    section_print(&center);
+
+    return 1;
+}
+void center_create_content() {
+     // contenido
     center.has_focus = false;
     center.selected_line = 0; // numero de linea seleccionada
     center.content = content_create(center.height);
-
-    box(center.win, 0, 0);
-
     content_add_line(center.content, "Ábaco ábaco Bienvenido a deecer <3");
     char *tmp_str;
     asprintf(&tmp_str, "Tamaño de panel. width:%d ; height:%d", center.width, center.height);
     content_add_line(center.content, tmp_str);
-    section_print(&center);
     free(tmp_str);
-
-    return 1;
 }
 void center_set_content(content_t *content) {
-    content_copy(center.content, content);
+    // Liberamos el espacio del contenido anterior
+    if (center.content != NULL) {
+        content_free(center.content);
+        center.content = NULL;
+    }
+    // Apuntamos hacia el nuevo content
+    center.content = content;
+    // refrescamos la pantalla escribiendo el nuevo contenido.
     section_print(&center);
 }
 int center_get_selected_line_content(content_t **content) {
@@ -506,13 +567,6 @@ int center_get_selected_line_content(content_t **content) {
  *
  ***********/
 static int player_create_window() {
-    player.content = content_create(5);
-    content_add_line(player.content, "[BACK]");
-    content_add_line(player.content, "[STOP]");
-    content_add_line(player.content, "[PLAY]");
-    content_add_line(player.content, "[PAUSE]");
-    content_add_line(player.content, "[FORWARD]");
-
     player.name = "player";
     player.height = screen_height - (search.height + center.height + MARGIN);
     player.width = 2;
@@ -534,5 +588,13 @@ static int player_create_window() {
     section_print(&player);
 
     return 1;
+}
+static void player_create_content() {
+    player.content = content_create(5);
+    content_add_line(player.content, "[BACK]");
+    content_add_line(player.content, "[STOP]");
+    content_add_line(player.content, "[PLAY]");
+    content_add_line(player.content, "[PAUSE]");
+    content_add_line(player.content, "[FORWARD]");
 }
 
