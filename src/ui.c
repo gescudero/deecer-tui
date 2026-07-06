@@ -350,8 +350,8 @@ ui_action_t ui_handle_input(char *return_value) {
         
     } else if (search.has_focus) { // Acciones en la ventana de busqueda
         // Hasta que no pulsen ENTER o TAB, cada tecla la escribimos en el campo
-        // de texto. Tenemos que resolver pulsaciones no alfanumericas y
-        // permitir borrar
+        // de texto. Desde la funcion content_add_char controlamos si le pasamos
+        // pulsaciones de teclas no imprimibles o Suprimir/Backspace
         while (pressed_key != 10 && pressed_key != 9) {
             pressed_key = wgetch(search.win);
             content_add_char(search.content, 0, pressed_key); // la añadimos a nuestro content

@@ -1,3 +1,5 @@
+// main.c
+#include "config.h"
 #include "utils.h"
 #include "ui.h"
 #include "player.h"
@@ -13,25 +15,33 @@ int main() {
     ui_action_t action;
     char ui_response[256];
     pthread_t player_thread;
-    
+
+    // read config
+    config_t *config = config_init(); 
     // init de la api y libcurl
     deezer_init();
 
+    fprintf(stderr, "Config cargada. User id=%s\n", config->user_id);
     // init de curses y la ui
     if (!ui_init()) {
-        fprintf(stderr, "Error creado las ventanas.");
+        fprintf(stderr, "Error creado las ventanas.\n");
         return 1;
     }
 
     // inicializamos el player (libmpv)
     if (!player_init()) {
-        fprintf(stderr, "Error creando el player.");
+        fprintf(stderr, "Error creando el player.\n");
         return 1;
     }
-
+    if (config->is_debug) {
+        fprintf(stderr, "Estamos en modo debug\n");
+    } else {
+        fprintf(stderr, "No estamos en modo debug\n");
+    }
     while(running) {
+        fprintf(stderr, "Estamos antes de la primera interaccion.\n");
         action = ui_handle_input(ui_response); // bloquea esperando tecla
-
+        fprintf(stderr, "Hemos pasado la primera interaccion.\n");
         switch (action) {
             case UI_ACTION_SELECT:
                 // ya veremos a ver que hay que hacer
