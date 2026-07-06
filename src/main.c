@@ -7,6 +7,7 @@
 #include <cjson/cJSON.h>
 #include <stdio.h>
 #include <pthread.h>
+#include <string.h>
 
 void* thread_player_openurl(void *arg); 
 
@@ -39,9 +40,7 @@ int main() {
         fprintf(stderr, "No estamos en modo debug\n");
     }
     while(running) {
-        fprintf(stderr, "Estamos antes de la primera interaccion.\n");
         action = ui_handle_input(ui_response); // bloquea esperando tecla
-        fprintf(stderr, "Hemos pasado la primera interaccion.\n");
         switch (action) {
             case UI_ACTION_SELECT:
                 // ya veremos a ver que hay que hacer
@@ -70,10 +69,38 @@ int main() {
                 // comprobamos que la linea seleccionada realmente sea un track,
                 // podria ser un texto cualquiera
                 if (content_line_is_track(center_content, selected_line-1)) {
+                    /***
+                     *
+                     * MODO PLAYLIST 
+                     *
+                     * **/
+                    // Creamos el fichero.
+                    char playlist_path[] = "/tmp/playlist-deezer";
+                    FILE *fptr;
+                    fptr = fopen(playlist_path,"w");
+                    // escribimos en cada linea del fichero una url
+                    for (int i=0; i < center_content->numlines; i++) {
+                        fprintf(fptr, "%s\n", center_content->tracks[i]->preview);
+                    }
+                    //cerramos el fichero
+                    fclose(fptr);
+                    // luego le pasamos la ruta a la funcion que lanza el player en un thread separado
+                   if (pthread_create(&player_thread, NULL, thread_player_openurl, (void*)playlist_path) != 0) {
+                            fprintf(stderr, "Error creando el thread\n");
+                    }
+
+
+                    /****
+                     *
+                     * MODO UN SOLO FILE / URL
+                     * Reproducimos un solo track no mas
+                     *
+                     *
                     // ejecutamos la reproduccion en un thread aparte (parece que funciona!!)    
                     if (pthread_create(&player_thread, NULL, thread_player_openurl, (void*)center_content->tracks[selected_line-1]->preview) != 0) {
                         fprintf(stderr, "Error creando el thread\n");
                     }
+                    **/
                 }
                 break;
             }
@@ -99,7 +126,8 @@ void* thread_player_openurl(void *arg) {
     pthread_detach(pthread_self()); // el thread se limpia
 
     char *url = (char*)arg; // casteamos el argumento
-    fprintf(stderr, "[thread_player_openurl] - Pedimos reproducir %s\n", url);
-    player_openurl(url);
+    fprintf(stderr, "[thread_player_openurl] - Pedimos reproducir\n%s\n", url);
+    //player_openurl(url);
+    player_openplaylist(url);
     return NULL;
 }

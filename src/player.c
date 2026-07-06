@@ -61,6 +61,21 @@ void player_openurl(char *url){
         }
     }
 }
+// igual que la funcion anterior pero que recibe una lista
+void player_openplaylist(char *url) {
+    const char *cmd[] = {"loadlist", url, NULL};
+    check_error(mpv_command(mpv,cmd));
+    while (1) {
+        mpv_event *event = mpv_wait_event(mpv, 10000);
+        fprintf(stderr, "[playlist] event: %s\n", mpv_event_name(event->event_id));
+        if (event->event_id == MPV_EVENT_SHUTDOWN) {
+            break;
+        } else if (event->event_id == MPV_EVENT_END_FILE) {
+            fprintf(stderr, "MPV_EVENT_END_FILE");
+            break;
+        }
+    }
+}
 void player_playfile(char *audio_data, size_t audio_size) {
     // Comprobaciones del audio recibido
     if (audio_size < 100) {
