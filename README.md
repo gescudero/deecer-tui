@@ -20,6 +20,8 @@ Una de las cosas que puede que te llamen la atención es que este repo esté doc
 ## Notas
 Para aprender he ido combinando lecturas clásicas cómo el libro `El lenguaje de programacion C` de K&R, visionado de videos de Youtube, lecturas de `man <LIBRARY_FUNCTION>` (¡algo que me ha encantado!), posts de StackOverflow, Reddit y demás foros de internet, y sí, también he preguntado en ocasiones a la IA. He usado la web de deepseek para hacerle preguntas de las que no conseguía respuesta buscando de otros modos o necesitaba respuesta a un tema demasiado concreto, pero siempre intentando que me explicase la respuesta como si fuera un profe, y no que me diera el código con la solución. En otras ocasiones le hubiera pedido trozos de código, pero en este proyecto prefería ir descubriendo yo las soluciones.
 
+Por supuesto las documentaciones respectivas, tanto de ncurses como de libmpv o cJSON han sido de gran utilidad, he leido algunos posts de gente que se queja de la documentacion que hay en la librerias de C, y bueno, quizás no son las más fáciles si lo que quieres es encontrar la solución a tu problema y pasar a lo siguiente, pero creo que son bastante didácticas si tienes paciencia y sigues leyendo.
+
 ## Enlaces
 [El lenguaje de programacion C](https://frrq.cvg.utn.edu.ar/pluginfile.php/13741/mod_resource/content/0/El-lenguaje-de-programacion-C-2-ed-kernighan-amp-ritchie.pdf) por Kernighan y Ritchie
 
@@ -31,5 +33,9 @@ Para aprender he ido combinando lecturas clásicas cómo el libro `El lenguaje d
 
 [Un cliente deezer de consola hecho en rust](https://github.com/Minuga-RC/deezer-tui) por Minuga-RC
 
-[Memoria dinamica en C] (https://www.youtube.com/playlist?list=PLja70d5XIV8aF_PpHS2dOrpuiSjnkGTsX) por New line
+[Memoria dinamica en C](https://www.youtube.com/playlist?list=PLja70d5XIV8aF_PpHS2dOrpuiSjnkGTsX) por New line
+
+[w3schools.com](https://www.w3schools.com/c/) por w3schools
+
+[libmpv documentation](https://mpv-player-mpv.mintlify.app/embedding/libmpv)
 
