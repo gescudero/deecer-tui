@@ -7,7 +7,6 @@
 #include <cjson/cJSON.h>
 #include <stdio.h>
 #include <pthread.h>
-#include <string.h>
 
 void* thread_player_openurl(void *arg); 
 
@@ -58,15 +57,36 @@ int main() {
                 }
                 break;
             }
-            case UI_ACTION_PLAY: {
-                // Nos piden reproducir un track
+            case UI_ACTION_LOAD_TRACK: {
+                /****
+                 *
+                 * MODO UN SOLO FILE / URL
+                 * Reproducimos un solo track no mas
+                 *
+                 ****/
+                content_t *center_content;
+                int selected_line = center_get_selected_line_content(&center_content);
+                
+                // comprobamos que la linea seleccionada sea un track
+                if (content_line_is_track(center_content, selected_line - 1)) {
+                    // ejecutamos la reproduccion en un thread aparte (parece que funciona!!)    
+                    if (pthread_create(&player_thread, NULL, thread_player_openurl, (void*)center_content->tracks[selected_line-1]->preview) != 0) {
+                        fprintf(stderr, "Error creando el thread\n");
+                    }
+                }
+
+
+                break;
+            }
+            case UI_ACTION_LOAD_PLAYLIST: {
+                // Nos piden reproducir una playlist
                 // para ello conseguimos el content completo del center,
                 // Creamos un puntero y lo pasamos para que nos escriban ahi
                 // la direccion de memoria al contenido y nos den la linea seleccionada
                 content_t *center_content;
                 // Ahora mismo pedimos el content y la linea seleccionada
                 int selected_line = center_get_selected_line_content(&center_content);
-                // comprobamos que la linea seleccionada realmente sea un track,
+                // comprobamos que la linea seleccionada realmente sea una playlist,
                 // podria ser un texto cualquiera
                 if (content_line_is_track(center_content, selected_line-1)) {
                     /***
@@ -90,20 +110,22 @@ int main() {
                     }
 
 
-                    /****
-                     *
-                     * MODO UN SOLO FILE / URL
-                     * Reproducimos un solo track no mas
-                     *
-                     *
-                    // ejecutamos la reproduccion en un thread aparte (parece que funciona!!)    
-                    if (pthread_create(&player_thread, NULL, thread_player_openurl, (void*)center_content->tracks[selected_line-1]->preview) != 0) {
-                        fprintf(stderr, "Error creando el thread\n");
-                    }
-                    **/
                 }
+
                 break;
             }
+            case UI_ACTION_PLAY: {
+                player_play();
+                break;
+            }
+            case UI_ACTION_STOP:
+            case UI_ACTION_PAUSE:
+                player_pause();
+                break;
+            case UI_ACTION_BACK:
+            case UI_ACTION_FORWARD:
+                player_forward();
+                break;
             case UI_ACTION_QUIT:
                 running = false;
                 break;

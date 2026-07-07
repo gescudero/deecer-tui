@@ -1,4 +1,5 @@
 #include "player.h"
+#include <sched.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -12,12 +13,11 @@ static mpv_handle *mpv;
 // debo ajustarla a mis necesidades
 static inline void check_error(int status) {
     if (status < 0) {
-        printf("mpv API error: %s\n", mpv_error_string(status));
-        exit(1);
+        fprintf(stderr, "mpv API error: %s\n", mpv_error_string(status));
     }
 }
 static void player_configure(mpv_handle *handle) {
-    mpv_set_option_string(handle, "terminal", "yes");
+    mpv_set_option_string(handle, "terminal", "no");
     mpv_set_option_string(handle, "msg-level", "all=error");
     mpv_set_option_string(handle, "no-video", "yes");
     mpv_set_option_string(handle, "audio-display", "no");
@@ -53,6 +53,7 @@ void player_end() {
 void player_openurl(char *url){
     const char *cmd[] = {"loadfile", url, NULL};
     check_error(mpv_command(mpv, cmd));
+    fprintf(stderr, "[player] Loadfile command...\n");
     while (1) {
         mpv_event *event = mpv_wait_event(mpv, 10000);
         fprintf(stderr, "event: %s\n", mpv_event_name(event->event_id));
@@ -65,6 +66,7 @@ void player_openurl(char *url){
 void player_openplaylist(char *url) {
     const char *cmd[] = {"loadlist", url, NULL};
     check_error(mpv_command(mpv,cmd));
+    fprintf(stderr, "[player] Loadlist command...\n");
     while (1) {
         mpv_event *event = mpv_wait_event(mpv, 10000);
         fprintf(stderr, "[playlist] event: %s\n", mpv_event_name(event->event_id));
@@ -108,6 +110,37 @@ void player_playfile(char *audio_data, size_t audio_size) {
             break;
         }
     }
+}
+// Resume play 
+void player_play() {
+    // Reading a flag property
+    int pausa;
+    mpv_get_property(mpv, "pause", MPV_FORMAT_FLAG, &pausa);
+    if (pausa > 0) {
+        pausa = 0;
+        check_error(mpv_set_property(mpv, "pause", MPV_FORMAT_FLAG, &pausa));
+        fprintf(stderr, "[player] Saliendo de la pausa. \n");
+    }
+}
+
+// Pause play
+void player_pause() {
+    // Set a property to a string value
+    int pausa = 1;
+    check_error(mpv_set_property(mpv, "pause", MPV_FORMAT_FLAG, &pausa));
+    fprintf(stderr, "[player] Pause set property. \n");
+}
+// Next song on playlist
+void player_forward() {
+    fprintf(stderr, "[player] Solicitada proxima cancion en la lista\n");
+    const char *cmd[] = {"playlist-next", "weak", NULL};
+    check_error(mpv_command(mpv, cmd));
+}
+
+// option 
+int player_get_time_pos(double *pos) {
+    mpv_get_property(mpv, "time-pos", MPV_FORMAT_DOUBLE, pos);
+    return 0;
 }
 
 unsigned char* player_download_encrypted_data() {

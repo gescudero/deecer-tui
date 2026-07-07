@@ -19,7 +19,7 @@ static int screen_height, screen_width;
 static section_t menu = {0};
 static section_t search = {0};
 static section_t center = {0};
-static section_t player = {0};
+static section_t playerui = {0};
 
 
 /****************
@@ -55,9 +55,10 @@ static void search_init_text();
 //center 
 static int center_create_window();
 static void center_create_content();
-//player 
-static int player_create_window();
-static void player_create_content();
+//playerui 
+static int playerui_create_window();
+static void playerui_create_content();
+static ui_action_t playerui_get_selected_action();
 
 /*******************
  *
@@ -98,7 +99,7 @@ static void section_print(section_t *sec) {
     int i = 0;
     // hemos seleccionado una linea que no cabe, entonces vamos moviendo 
     // la primera linea que imprimimos, de forma que creamos el scroll
-    if (strcmp(sec->name, "player") != 0 &&sec->selected_line > sec->height -2) {
+    if (strcmp(sec->name, "playerui") != 0 &&sec->selected_line > sec->height -2) {
         i = (sec->selected_line - (sec->height - 2));
     }
     // imprimimos linea a linea y pintamos diferente 
@@ -113,8 +114,8 @@ static void section_print(section_t *sec) {
                 mvwprintw(sec->win, y, x, "%s", sec->content->text[i]);
             }
         }
-       // player escribe en horizontal, el resto en vertical
-        if (strcmp(sec->name, "player") == 0 ) {
+       // playerui escribe en horizontal, el resto en vertical
+        if (strcmp(sec->name, "playerui") == 0 ) {
             x += strlen(sec->content->text[i]) + 2;
         } else {
             ++y;
@@ -162,8 +163,8 @@ static void section_set_focus(section_t *sec) {
     // activamos la entrada del teclado en la ventana
     keypad(sec->win, TRUE);
     // seleccionamos la primera linea por defecto
-    // excepto si es player
-    if (strcmp(sec->name, "player") == 0) {
+    // excepto si es playerui
+    if (strcmp(sec->name, "playerui") == 0) {
         sec->selected_line = UI_PLAYER_PLAY;
     } else {
         sec->selected_line = 1;
@@ -200,7 +201,7 @@ static void ui_init_content() {
     menu_create_content();
     search_create_content();
     center_create_content();
-    player_create_content();
+    playerui_create_content();
 }
 static bool ui_init_windows() {
 // funciones de inicializacion de ncurses
@@ -230,7 +231,7 @@ static bool ui_init_windows() {
         ui_end();
         return false;
     }
-    if (!player_create_window()) {
+    if (!playerui_create_window()) {
         return false;
     }
 
@@ -246,16 +247,21 @@ void ui_end() {
     ui_end_windows();
     ui_end_content();
 }
+// Liberamos ventanas
 static void ui_end_windows() {
     section_delwin(&menu);
     section_delwin(&search);
     section_delwin(&center);
-    section_delwin(&player);
+    section_delwin(&playerui);
     clrtoeol();
     endwin();
 }
+// Liberamos contenido
 static void ui_end_content() {
-
+    content_free(menu.content);
+    content_free(search.content);
+    content_free(center.content);
+    content_free(playerui.content);
 }
 // Inicializacion de los pares de colores
 static void ui_start_colors() {
@@ -283,13 +289,16 @@ static void ui_change_focus() {
     } else if (center.has_focus) {
         // si teniamos foco en center, volvemos a menu
         section_unset_focus(&center);
-        section_set_focus(&player);
-    } else if (player.has_focus) {
-        section_unset_focus(&player);
+        section_set_focus(&playerui);
+    } else if (playerui.has_focus) {
+        section_unset_focus(&playerui);
         section_set_focus(&menu);
     }
 }
-
+//
+// Funcion que comprueba si ha cambiado
+// la altura o la anchura de la ventana padre
+//
 static bool ui_console_changed_size() {
     int new_height;
     int new_width;
@@ -304,12 +313,14 @@ static bool ui_console_changed_size() {
     }
     return false;
 }
+//
 // Funcion que se ejecuta en el bucle principal y que espera 
 // la accion del usuario. Una vez el usuario pulsa alguna tecla
 // ejecutamos lo necesario y devolvemos la accion realizada
 // excepto en el caso de la busqueda, que nos quedamos en un bucle
 // para capturar lo que el usuario escriba por teclado
 // hasta que el usuario pulse ENTER o TAB para salir
+//
 ui_action_t ui_handle_input(char *return_value) {
     // Primero comprobamos si la terminal ha cambiado de tamaño.
     if (ui_console_changed_size()) {
@@ -389,13 +400,13 @@ ui_action_t ui_handle_input(char *return_value) {
                 // hay que reproducir la seleccion
                 //
                 // copiamos el texto y lo devolvemos en el return_value 
-                // (Inutil porque desde main peditemos el content de center)
+                // (Inutil porque desde main pediremos el content de center)
                 strcpy(return_value, center.content->text[center.selected_line-1]);
-                // pasamos al player el estado para reflejarlo en la ui y preseleccionar el play
-                ui_change_focus();
-                player.selected_line = UI_PLAYER_PLAY;
-                section_print(&player);
-                return UI_ACTION_PLAY;
+                // pasamos playerui el estado para reflejarlo en la ui y preseleccionar el play
+                // pero no cambiamos el foco, simplemente iluminamos el play
+                playerui.selected_line = UI_PLAYER_PLAY;
+                section_print(&playerui);
+                return UI_ACTION_LOAD_PLAYLIST;
             case 'q':
             case 'Q':
                 // Salimos
@@ -406,19 +417,23 @@ ui_action_t ui_handle_input(char *return_value) {
         }
         section_print(&center);
         return UI_ACTION_NONE;
-    } else if (player.has_focus) {
-        pressed_key = section_getch(&player);
+    } else if (playerui.has_focus) {
+        pressed_key = section_getch(&playerui);
         switch (pressed_key) {
             case KEY_LEFT:
-                section_prev_option(&player);
+                section_prev_option(&playerui);
                 break;
             case KEY_RIGHT:
-                section_next_option(&player);
+                section_next_option(&playerui);
                 break;
             case 9:
                 // TAB
                 ui_change_focus();
                 return UI_ACTION_CHANGE_FOCUS;
+            case 10:
+                // ENTER
+                return playerui_get_selected_action();
+                break;
             case 'q':
             case 'Q':
                 ui_end();
@@ -426,7 +441,7 @@ ui_action_t ui_handle_input(char *return_value) {
             default:
                 return UI_ACTION_NONE;
         }
-        section_print(&player);
+        section_print(&playerui);
         return UI_ACTION_NONE;
     }
     return UI_ACTION_NONE;
@@ -563,38 +578,64 @@ int center_get_selected_line_content(content_t **content) {
 
 /************
  *
- * player section functions
+ * playerui section functions
  *
  ***********/
-static int player_create_window() {
-    player.name = "player";
-    player.height = screen_height - (search.height + center.height + MARGIN);
-    player.width = 2;
-    for (int i=0; i<player.content->numlines; i++) {
-        player.width += strlen(player.content->text[i]) + 2;
+static int playerui_create_window() {
+    playerui.name = "playerui";
+    playerui.height = screen_height - (search.height + center.height + MARGIN);
+    playerui.width = 2;
+    for (int i=0; i<playerui.content->numlines; i++) {
+        playerui.width += strlen(playerui.content->text[i]) + 2;
     }
-    player.starty = center.starty + center.height;
-    player.startx = (center.width / 2) - (player.width / 2) + menu.width;
+    playerui.starty = center.starty + center.height;
+    playerui.startx = (center.width / 2) - (playerui.width / 2) + menu.width;
 
-    player.win = newwin(player.height, player.width, player.starty, player.startx);
+    playerui.win = newwin(playerui.height, playerui.width, playerui.starty, playerui.startx);
 
-    if (player.win == NULL) {
+    if (playerui.win == NULL) {
         return 0;
     }
 
-    player.has_focus = false;
-    player.selected_line = 0;
+    playerui.has_focus = false;
+    playerui.selected_line = 0;
     
-    section_print(&player);
+    section_print(&playerui);
 
     return 1;
 }
-static void player_create_content() {
-    player.content = content_create(5);
-    content_add_line(player.content, "[BACK]");
-    content_add_line(player.content, "[STOP]");
-    content_add_line(player.content, "[PLAY]");
-    content_add_line(player.content, "[PAUSE]");
-    content_add_line(player.content, "[FORWARD]");
+static void playerui_create_content() {
+    playerui.content = content_create(5);
+    content_add_line(playerui.content, "[BACK]");
+    content_add_line(playerui.content, "[STOP]");
+    content_add_line(playerui.content, "[PLAY]");
+    content_add_line(playerui.content, "[PAUSE]");
+    content_add_line(playerui.content, "[FORWARD]");
 }
 
+static ui_action_t playerui_get_selected_action() {
+    switch (playerui.selected_line) {
+        case UI_PLAYER_BACK:
+            return UI_ACTION_BACK;
+            break;
+        case UI_PLAYER_STOP:
+            return UI_ACTION_STOP;
+            break;
+        case UI_PLAYER_PLAY:
+            return UI_ACTION_PLAY;
+            break;
+        case UI_PLAYER_PAUSE:
+            return UI_ACTION_PAUSE;
+            break;
+        case UI_PLAYER_FORWARD:
+            if (center.selected_line < center.content->numlines) {
+                section_next_option(&center);
+                section_print(&center);
+            }
+            return UI_ACTION_FORWARD;
+            break;
+        default:
+            return UI_ACTION_NONE;
+            break;
+    }
+}

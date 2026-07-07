@@ -317,7 +317,7 @@ bool deezer_album_is_valid(album_t *album) {
     return true;
 }
 void deezer_track_free(track_t *track) {
-    fprintf(stderr, "Entramos en track free. %p\n", track);
+    // fprintf(stderr, "Entramos en track free. %p\n", track);
     if (track == NULL) {
         return;
     }
@@ -347,7 +347,7 @@ void deezer_track_free(track_t *track) {
     track = NULL;
 }
 void deezer_artist_free(artist_t *artist) {
-    fprintf(stderr, "Entramos en artist free. %p\n", artist);
+    // fprintf(stderr, "Entramos en artist free. %p\n", artist);
     if (artist == NULL) {
         return;
     }
@@ -367,7 +367,7 @@ void deezer_artist_free(artist_t *artist) {
     artist = NULL;
 }
 void deezer_album_free(album_t *album) {
-    fprintf(stderr, "Entramos en album free. %p\n", album);
+    //fprintf(stderr, "Entramos en album free. %p\n", album);
     if (album == NULL) {
         return;
     }
