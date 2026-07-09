@@ -1,4 +1,11 @@
 //deezer_api.h
+/*********
+ * 
+ * Declaracion api publica de deezer
+ * solo se usa si no tenemos arl en 
+ * la configuracion
+ *
+ ********/
 #ifndef DEEZER_API_H
 #define DEEZER_API_H
 #include "models.h"
@@ -56,11 +63,15 @@ char* deezer_get_chart(int id);
 char* deezer_get_playlist(int id);
 char* deezer_get_track(int id);
 char* deezer_get_user();
+playlist_t* deezer_create_playlist(int id, char *title, char *description, 
+                                    char *link, int nb_tracks, track_t **tracks);
 bool deezer_track_is_valid(track_t *track);
 bool deezer_artist_is_valid(artist_t *artist);
 bool deezer_album_is_valid(album_t *album); 
+bool deezer_playlist_is_valid(playlist_t *playlist);
 void deezer_track_free(track_t *track);
 void deezer_artist_free(artist_t *artist);
 void deezer_album_free(album_t *album);
+void deezer_playlist_free(playlist_t *playlist);
 
 #endif

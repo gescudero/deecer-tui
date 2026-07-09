@@ -14,6 +14,7 @@ struct content_t {
     size_t numlines;
     size_t maxlines;
     track_t **tracks;
+    playlist_t **playlists;
 };
 
 content_t* content_create(size_t content_size);
@@ -21,7 +22,10 @@ void content_init(content_t *cont, size_t content_size);
 void content_add_line(content_t *cont, const char *texto);
 void content_add_char(content_t *cont, int line_index, const char c);
 void content_add_track(content_t *cont, track_t *track);
+int content_add_playlist(content_t *cont, playlist_t *playlist);
+int content_add_playlist_in_row(content_t *cont, playlist_t *playlist, int line_index);
 bool content_line_is_track(const content_t *cont, int line_index);
+bool content_line_is_playlist(const content_t *cont, int line_index);
 void content_add(content_t *dest, const content_t *addition);
 void content_clear(content_t *cont);
 void content_free(content_t *cont);

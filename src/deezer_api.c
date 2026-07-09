@@ -1,3 +1,11 @@
+//deezer_api.c 
+/***********
+ *
+ * Definicion api publica de deezer 
+ * quedara deprecated o se usara solo 
+ * si no tenemos arl configurado.
+ *
+ ***********/
 #include "deezer_api.h"
 #include "models.h"
 #include "utils.h"
@@ -84,15 +92,16 @@ content_t* deezer_search(const char *query) {
                     // comprobamos que el objeto JSON cumpla nuestras necesidades
                     if (json == NULL) {
                         const char *error_ptr = cJSON_GetErrorPtr();
-                        content_add_line(resp, "Error leyendo el json");
+                        content_add_line(resp, "[deezer_api] Error leyendo el json\n");
                         content_add_line(resp, error_ptr);
                     } else if (cJSON_IsInvalid(json) || !cJSON_IsObject(json)){
                         // El json no se ha parseado bien o hemos recibido algo chunguer
                         // nosotros esperamos un Objeto, asi que si no es asi
                         // Cancelamos y devolvemos un mensajito de error
-                        content_add_line(resp, "el objeto json es invalido, un poco cojo");
+                        content_add_line(resp, "[deezer_api] el objeto json es invalido, un poco cojo\n");
                     } else {
                         // access to data
+                        fprintf(stderr, "[deezer_api] Recibido json correcto\n");
                         cJSON *data = cJSON_GetObjectItemCaseSensitive(json, "data");
                         cJSON *num_objects = cJSON_GetObjectItem(json, "total");
                         // el objeto que contiene el numero total de items que devuelve 
@@ -110,29 +119,43 @@ content_t* deezer_search(const char *query) {
                                 free(text);
                                 **/
                             } else {
-                                content_add_line(resp, "Parece que no es numerico");
+                                content_add_line(resp, "[deezer_api]Parece que no es numerico\n");
                             }
                         } else {
-                            content_add_line(resp, "el objeto num_objects es NULL");
+                            content_add_line(resp, "[deezer_api]el objeto num_objects es NULL\n");
                         }
+                        fprintf(stderr, "[deezer_api] Recibidos %d elementos en el json\n", num_objects->valueint);
                         // el objeto que contiene todos los datos, es un Array de items
                         if (data !=NULL) {
                             if (cJSON_IsArray(data)) {
+                                //Añado una linea al content para la playlist
+                                content_add_line(resp, "[ Play Playlist ]");
                                 //Hemos recibido un array, vamos bien
                                 cJSON *iterator = NULL;
                                 cJSON_ArrayForEach(iterator, data) {
                                     // convertimos a objeto track 
                                     track_t *trackp = deezer_convert_json_to_track(iterator);
                                     if (trackp != NULL) {
-                                        //fprintf(stderr, "track: %s\n", trackp->preview);
-                                        //content_add_line(resp, trackp->preview);
+                                        //añadimos el track al content de respuesta
                                         content_add_track(resp, trackp);
                                     }
-                                    //fprintf(stderr, "Vamos a liberar\n");
-                                    //deezer_track_free(trackp);
                                 }
                             }
                         }
+                        fprintf(stderr, "[deezer_api] Ya hemos añadido todos los tracks\n");
+                        // ya tenemos todos los tracks añadidos en content 
+                        // y tenemos num_objects que contiene el numero de elementos
+                        // Ahora crearemos la playlist que incluya todos los tracks 
+                        // pero queremos ponerla en el primer row. por eso creamos 
+                        playlist_t *playlist;
+                        if (25 < num_objects->valueint) {
+                            playlist = deezer_create_playlist(-1, "[ Play Playlist ]", "", "", 25, resp->tracks);
+                            fprintf(stderr, "[deezer_api] Creada playlist con 25 elementos\n");
+                        } else {
+                            fprintf(stderr, "[deezer_api] Creada playlist con %d elementos\n", num_objects->valueint);
+                            playlist = deezer_create_playlist(-1, "[ Play Playlist ]", "", "", num_objects->valueint, resp->tracks);
+                        }
+                        content_add_playlist_in_row(resp, playlist, 0);
                     }
                     cJSON_Delete(json);
                 } else {
@@ -268,6 +291,38 @@ static album_t* deezer_convert_json_to_album(cJSON *json_album) {
     }
     return album;
 }
+playlist_t* deezer_create_playlist(int id, char *title, char *description, 
+                                    char *link, int nb_tracks, track_t **tracks) {
+    playlist_t *playlist = calloc(1, sizeof(playlist_t));
+    if (playlist == NULL) {
+        return NULL;
+    }
+    playlist->id = id;
+    playlist->title = strdup(title);
+    playlist->description = strdup(description);
+    playlist->link = strdup(link);
+    playlist->nb_tracks = nb_tracks;
+
+    playlist->tracks = calloc(nb_tracks, sizeof(track_t*));
+    if (playlist->tracks == NULL) {
+        free(playlist->link);
+        free(playlist->description);
+        free(playlist->title);
+        free(playlist);
+        return NULL;
+    }
+    int j=0;
+    for (int i=0; i<nb_tracks; i++) {
+        if (deezer_track_is_valid(tracks[i])) {
+            fprintf(stderr, "[deezer_api] Añadimos %s en posicion %d de la playlist\n", tracks[i]->title, j);
+            playlist->tracks[j] = tracks[i];
+            j++;
+        }
+    }
+
+    return playlist;
+}
+
 bool deezer_track_is_valid(track_t *track) {
     if (track == NULL) {
         return false;
@@ -312,6 +367,24 @@ bool deezer_album_is_valid(album_t *album) {
         return false;
     }
     if (album->title[0] == '\0') {
+        return false;
+    }
+    return true;
+}
+bool deezer_playlist_is_valid(playlist_t *playlist) {
+    if (playlist == NULL) {
+        return false;
+    }
+    if (playlist->id == 0) {
+        return false;
+    }
+    if (playlist->title == NULL) {
+        return false;
+    }
+    if (playlist->title[0] == '\0') {
+        return false;
+    }
+    if (playlist->nb_tracks < 1) {
         return false;
     }
     return true;

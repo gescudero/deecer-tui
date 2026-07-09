@@ -398,15 +398,22 @@ ui_action_t ui_handle_input(char *return_value) {
             case 10:
                 //ENTER
                 // hay que reproducir la seleccion
+                // debemos diferenciar si ha seleccionado un track 
+                // o una playlist
                 //
-                // copiamos el texto y lo devolvemos en el return_value 
-                // (Inutil porque desde main pediremos el content de center)
-                strcpy(return_value, center.content->text[center.selected_line-1]);
                 // pasamos playerui el estado para reflejarlo en la ui y preseleccionar el play
                 // pero no cambiamos el foco, simplemente iluminamos el play
+                fprintf(stderr, "[ui] Has seleccionado reproducir ");
                 playerui.selected_line = UI_PLAYER_PLAY;
                 section_print(&playerui);
-                return UI_ACTION_LOAD_PLAYLIST;
+                if (content_line_is_track(center.content, center.selected_line -1)) {
+                    fprintf(stderr, " un track.\n");
+                    return UI_ACTION_LOAD_TRACK;
+                } else if(content_line_is_playlist(center.content, center.selected_line -1)) {
+                    fprintf(stderr, " una playlist.\n");
+                    return UI_ACTION_LOAD_PLAYLIST;
+                }
+                return UI_ACTION_NONE;
             case 'q':
             case 'Q':
                 // Salimos
@@ -628,10 +635,6 @@ static ui_action_t playerui_get_selected_action() {
             return UI_ACTION_PAUSE;
             break;
         case UI_PLAYER_FORWARD:
-            if (center.selected_line < center.content->numlines) {
-                section_next_option(&center);
-                section_print(&center);
-            }
             return UI_ACTION_FORWARD;
             break;
         default:

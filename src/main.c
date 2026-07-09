@@ -9,6 +9,7 @@
 #include <pthread.h>
 
 void* thread_player_openurl(void *arg); 
+void* thread_player_openplaylist(void *arg); 
 
 int main() {
     bool running = true;
@@ -54,6 +55,10 @@ int main() {
                 if (resp != NULL) {
                     // seteamos el contenido
                     center_set_content(resp);
+                    if (deezer_playlist_is_valid(resp->playlists[0])) {
+                        fprintf(stderr, "Primera playlist: %s\n", resp->playlists[0]->title );
+                        fprintf(stderr, "Primera track de la playlist: %s\n", resp->playlists[0]->tracks[1]->title);
+                    }
                 }
                 break;
             }
@@ -88,24 +93,37 @@ int main() {
                 int selected_line = center_get_selected_line_content(&center_content);
                 // comprobamos que la linea seleccionada realmente sea una playlist,
                 // podria ser un texto cualquiera
-                if (content_line_is_track(center_content, selected_line-1)) {
+                if (content_line_is_playlist(center_content, selected_line-1)) {
                     /***
                      *
                      * MODO PLAYLIST 
                      *
                      * **/
+                    fprintf(stderr, "[main] Vamos a crear el fichero para la playlist\n");
                     // Creamos el fichero.
-                    char playlist_path[] = "/tmp/playlist-deezer";
+                    char *playlist_path = strdup("/tmp/playlist-deezer");
                     FILE *fptr;
                     fptr = fopen(playlist_path,"w");
-                    // escribimos en cada linea del fichero una url
-                    for (int i=0; i < center_content->numlines; i++) {
-                        fprintf(fptr, "%s\n", center_content->tracks[i]->preview);
+                    if (fptr == NULL) {
+                        fprintf(stderr, "[main] Oh oh, hay problemas con el fichero\n");
                     }
+                    fprintf(stderr, "selected line: %d\n", selected_line);
+                    fprintf(stderr, "primer track: %s\n", center_content->playlists[0]->tracks[0]->title);
+                    // escribimos en cada linea del fichero una url
+                    for (int i=0; i < center_content->playlists[selected_line-1]->nb_tracks; i++) {
+                        if (deezer_track_is_valid(center_content->playlists[selected_line-1]->tracks[i])) {
+                            fprintf(fptr, "%s\n", center_content->playlists[selected_line-1]->tracks[i]->preview);
+                            fprintf(stderr, "%s\n", center_content->playlists[selected_line-1]->tracks[i]->preview);
+                        }
+                    }
+                    fprintf(stderr, "[main] Fichero creado\n");
+                    // for (int i=0; i < center_content->numlines; i++) {
+                    //     fprintf(fptr, "%s\n", center_content->tracks[i]->preview);
+                    // }
                     //cerramos el fichero
                     fclose(fptr);
                     // luego le pasamos la ruta a la funcion que lanza el player en un thread separado
-                   if (pthread_create(&player_thread, NULL, thread_player_openurl, (void*)playlist_path) != 0) {
+                   if (pthread_create(&player_thread, NULL, thread_player_openplaylist, (void*)playlist_path) != 0) {
                             fprintf(stderr, "Error creando el thread\n");
                     }
 
@@ -119,10 +137,14 @@ int main() {
                 break;
             }
             case UI_ACTION_STOP:
+                player_stop();
+                break;
             case UI_ACTION_PAUSE:
                 player_pause();
                 break;
             case UI_ACTION_BACK:
+                player_back();
+                break;
             case UI_ACTION_FORWARD:
                 player_forward();
                 break;
@@ -149,7 +171,16 @@ void* thread_player_openurl(void *arg) {
 
     char *url = (char*)arg; // casteamos el argumento
     fprintf(stderr, "[thread_player_openurl] - Pedimos reproducir\n%s\n", url);
-    //player_openurl(url);
+    player_openurl(url);
+    free(url);
+    return NULL;
+}
+void* thread_player_openplaylist(void *arg) {
+    pthread_detach(pthread_self()); // el thread se limpia
+
+    char *url = (char*)arg; // casteamos el argumento
+    fprintf(stderr, "[thread_player_openurl] - Pedimos reproducir\n%s\n", url);
     player_openplaylist(url);
+    free(url);
     return NULL;
 }
