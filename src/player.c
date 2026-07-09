@@ -51,6 +51,7 @@ void player_end() {
 }
 // esta funcion es capaz de reproducir una url si no esta encriptada
 void player_openurl(char *url){
+    player_stop();
     const char *cmd[] = {"loadfile", url, NULL};
     check_error(mpv_command(mpv, cmd));
     fprintf(stderr, "[player] Loadfile command...\n");
@@ -64,6 +65,7 @@ void player_openurl(char *url){
 }
 // igual que la funcion anterior pero que recibe una lista
 void player_openplaylist(char *url) {
+    player_stop();
     const char *cmd[] = {"loadlist", url, NULL};
     check_error(mpv_command(mpv,cmd));
     fprintf(stderr, "[player] Loadlist command...\n");
@@ -111,6 +113,11 @@ void player_playfile(char *audio_data, size_t audio_size) {
         }
     }
 }
+void player_stop() {
+    const char *cmd[] = {"stop", "", NULL};
+    check_error(mpv_command(mpv, cmd));
+    fprintf(stderr, "[player] Comando stop\n");
+}
 // Resume play 
 void player_play() {
     // Reading a flag property
@@ -136,7 +143,12 @@ void player_forward() {
     const char *cmd[] = {"playlist-next", "weak", NULL};
     check_error(mpv_command(mpv, cmd));
 }
-
+// Previous song on playlist
+void player_back() {
+    fprintf(stderr, "[player] Solicitada anterior cancion en la lista\n");
+    const char *cmd[] = {"playlist-prev", "weak", NULL};
+    check_error(mpv_command(mpv, cmd));
+}
 // option 
 int player_get_time_pos(double *pos) {
     mpv_get_property(mpv, "time-pos", MPV_FORMAT_DOUBLE, pos);
