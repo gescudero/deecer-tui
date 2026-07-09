@@ -1,6 +1,6 @@
 CC = gcc
-CFLAGS = -Wall -g
-LDFLAGS = -lncursesw -ltinfow -lcurl -lcjson -lmpv -lpthread
+CFLAGS = -Wall -g -fsanitize=address 
+LDFLAGS = -lncursesw -ltinfow -lcurl -lcjson -lmpv -lpthread -static-libasan
 TARGET = deecer-tui
 
 SRC_DIR = src
