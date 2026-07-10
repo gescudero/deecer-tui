@@ -11,6 +11,7 @@ static void config_set_key(char *key, char *value);
 
 config_t* config_init() {
     app_config.is_debug = false;
+    app_config.deezer_active = false;
     config_read_file("/home/guille/.deezer/config");
     return &app_config;
 }
@@ -31,11 +32,14 @@ int config_read_file(char *path_to_file) {
         // Añadimos caracter a caracter para evitar saltos de linea extras
         // y para poder detectar '='
         for (i=0; i < strlen(textline); i++) {
+            // detectamos si es un comentario, salto de linea y
+            // cualquier caracter no imprimible. Si lo encontramos
+            // salimos del for y pasamos a la siguiente linea
             if (31 > textline[i] || '#' == textline[i]) {
                 break;
             }
+            // si el caracter es = cambiamos de contenedor
             if (textline[i] == '=') {
-                // si el caracter es = cambiamos de contenedor
                 is_value = true;
                 key[i] = '\0';
                 j = 0;
@@ -51,6 +55,7 @@ int config_read_file(char *path_to_file) {
         }
         config_set_key(key, value);
     }
+    fclose(fptr);
     return 0;
 }
 
@@ -63,7 +68,7 @@ void config_set_key(char *key, char *value) {
         }
     } else if (strcmp(key, "DEEZER_ARL") == 0) {
         app_config.arl = strdup(value);
-    } else if (strcmp(key, "USER_ID") == 0) {
-        app_config.user_id = strdup(value);
-    }  
+    } else if (strcmp(key, "THEME") == 0) {
+        app_config.theme = strdup(value);
+    }
 }

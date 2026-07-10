@@ -206,7 +206,14 @@ playlist_t *deezer_create_playlist();
 
 
 // public actions
-content_t *deezer_search(const char *query);
+content_t *deezer_search(const char *query) {
+    content_t *resp = content_create(1);
+
+    content_add_line(resp, "Hemos llegado al nuevo search :)");
+    content_add_line(resp, query);
+
+    return resp;
+}
 
 static size_t writecallback(char *contents, size_t size, size_t nmemb, void *userp) {
     /*
@@ -240,6 +247,16 @@ album_t *deezer_get_album(int id);
 playlist_t *deezer_get_playlist(int id);
 
 // comprobadores
+bool deezer_arl_is_valid(const char *arl) {
+    // checkeo muy rudimentario del valor de la clave arl
+    if (arl == NULL) {
+        return false;
+    }
+    if (strlen(arl) < 20) {
+        return false;
+    }
+    return true;
+}
 bool deezer_track_is_valid(track_t *track) {
     // NOT IMPLEMENTED
     return false;

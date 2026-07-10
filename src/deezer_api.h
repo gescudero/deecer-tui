@@ -94,6 +94,7 @@ album_t *deezer_get_album(int id);
 playlist_t *deezer_get_playlist(int id);
 
 // comprobadores
+bool deezer_arl_is_valid(const char *arl);
 bool deezer_track_is_valid(track_t *track);
 bool deezer_artist_is_valid(artist_t *artist);
 bool deezer_album_is_valid(album_t *album);

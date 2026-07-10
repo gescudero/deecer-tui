@@ -1,5 +1,6 @@
 // main.c
 #include "config.h"
+#include "models.h"
 #include "ui.h"
 #include "player.h"
 #include "deezer_api.h"
@@ -22,25 +23,32 @@ int main() {
 
     LOG("Config cargada. User arl=%s\n", config->arl);
     
-    // init de la api y libcurl
-    deezer_init(config);
-    LOG("Api inicializada.\n");
-/***
+    if (deezer_arl_is_valid(config->arl)) {
+        // init de la api y libcurl
+        if (deezer_init(config) == DC_SUCCESS) {
+            config->deezer_active = true;
+            LOG("Api inicializada.\n");
+        } else {
+            LOG("Ha ocurrido un error iniciando la api de deezer.\n");
+        }
+    } else {
+        LOG("No existe una clave ARL válida.\n");
+    }
     // init de curses y la ui
     if (!ui_init()) {
-        fprintf(stderr, "Error creado las ventanas.\n");
+        LOG("Error creado las ventanas.\n");
         return 1;
     }
 
     // inicializamos el player (libmpv)
     if (!player_init()) {
-        fprintf(stderr, "Error creando el player.\n");
+        LOG("Error creando el player.\n");
         return 1;
     }
     if (config->is_debug) {
-        fprintf(stderr, "Estamos en modo debug\n");
+        LOG("Estamos en modo debug\n");
     } else {
-        fprintf(stderr, "No estamos en modo debug\n");
+        LOG("No estamos en modo debug\n");
     }
     while(running) {
         action = ui_handle_input(ui_response); // bloquea esperando tecla
@@ -58,10 +66,10 @@ int main() {
                 if (resp != NULL) {
                     // seteamos el contenido
                     center_set_content(resp);
-                    if (deezer_playlist_is_valid(resp->playlists[0])) {
-                        fprintf(stderr, "Primera playlist: %s\n", resp->playlists[0]->title );
-                        fprintf(stderr, "Primera track de la playlist: %s\n", resp->playlists[0]->tracks[1]->title);
-                    }
+                    // if (deezer_playlist_is_valid(resp->playlists[0])) {
+                    //     fprintf(stderr, "Primera playlist: %s\n", resp->playlists[0]->title );
+                    //     fprintf(stderr, "Primera track de la playlist: %s\n", resp->playlists[0]->tracks[1]->title);
+                    // }
                 }
                 break;
             }
@@ -78,9 +86,9 @@ int main() {
                 // comprobamos que la linea seleccionada sea un track
                 if (content_line_is_track(center_content, selected_line - 1)) {
                     // ejecutamos la reproduccion en un thread aparte (parece que funciona!!)    
-                    if (pthread_create(&player_thread, NULL, thread_player_openurl, (void*)center_content->tracks[selected_line-1]->preview) != 0) {
-                        fprintf(stderr, "Error creando el thread\n");
-                    }
+                    // if (pthread_create(&player_thread, NULL, thread_player_openurl, (void*)center_content->tracks[selected_line-1]->preview) != 0) {
+                    //     fprintf(stderr, "Error creando el thread\n");
+                    // }
                 }
 
 
@@ -115,8 +123,8 @@ int main() {
                     // escribimos en cada linea del fichero una url
                     for (int i=0; i < center_content->playlists[selected_line-1]->nb_tracks; i++) {
                         if (deezer_track_is_valid(center_content->playlists[selected_line-1]->tracks[i])) {
-                            fprintf(fptr, "%s\n", center_content->playlists[selected_line-1]->tracks[i]->preview);
-                            fprintf(stderr, "%s\n", center_content->playlists[selected_line-1]->tracks[i]->preview);
+                            // fprintf(fptr, "%s\n", center_content->playlists[selected_line-1]->tracks[i]->preview);
+                            // fprintf(stderr, "%s\n", center_content->playlists[selected_line-1]->tracks[i]->preview);
                         }
                     }
                     fprintf(stderr, "[main] Fichero creado\n");
@@ -162,7 +170,6 @@ int main() {
     }
     // Rutinas de cerrado de la aplicacion 
     pthread_cancel(player_thread);
-    ***/
     player_end();
     ui_end();
     deezer_cleanup();
