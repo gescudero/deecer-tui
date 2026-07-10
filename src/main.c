@@ -1,11 +1,11 @@
 // main.c
 #include "config.h"
-#include "utils.h"
 #include "ui.h"
 #include "player.h"
 #include "deezer_api.h"
-#include <cjson/cJSON.h>
+#include <stdlib.h>
 #include <stdio.h>
+#include <cjson/cJSON.h>
 #include <pthread.h>
 
 void* thread_player_openurl(void *arg); 
@@ -19,10 +19,13 @@ int main() {
 
     // read config
     config_t *config = config_init(); 
-    // init de la api y libcurl
-    deezer_init();
 
-    fprintf(stderr, "Config cargada. User id=%s\n", config->user_id);
+    LOG("Config cargada. User arl=%s\n", config->arl);
+    
+    // init de la api y libcurl
+    deezer_init(config);
+    LOG("Api inicializada.\n");
+/***
     // init de curses y la ui
     if (!ui_init()) {
         fprintf(stderr, "Error creado las ventanas.\n");
@@ -63,12 +66,12 @@ int main() {
                 break;
             }
             case UI_ACTION_LOAD_TRACK: {
-                /****
-                 *
-                 * MODO UN SOLO FILE / URL
-                 * Reproducimos un solo track no mas
-                 *
-                 ****/
+                //
+                // 
+                //  MODO UN SOLO FILE / URL
+                //  Reproducimos un solo track no mas
+                // 
+                // 
                 content_t *center_content;
                 int selected_line = center_get_selected_line_content(&center_content);
                 
@@ -94,11 +97,11 @@ int main() {
                 // comprobamos que la linea seleccionada realmente sea una playlist,
                 // podria ser un texto cualquiera
                 if (content_line_is_playlist(center_content, selected_line-1)) {
-                    /***
-                     *
-                     * MODO PLAYLIST 
-                     *
-                     * **/
+                    //
+                    //
+                    // MODO PLAYLIST 
+                    //
+                    // 
                     fprintf(stderr, "[main] Vamos a crear el fichero para la playlist\n");
                     // Creamos el fichero.
                     char *playlist_path = strdup("/tmp/playlist-deezer");
@@ -159,9 +162,10 @@ int main() {
     }
     // Rutinas de cerrado de la aplicacion 
     pthread_cancel(player_thread);
-    deezer_cleanup();
+    ***/
     player_end();
     ui_end();
+    deezer_cleanup();
     return 0;
 }
 

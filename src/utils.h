@@ -5,6 +5,10 @@
 #include <stdbool.h>
 #include <string.h>
 
+#define LOG(msg, ...) { \
+  fprintf(stderr, "[%s][Line %d] ", __FILE__, __LINE__); \
+  fprintf(stderr, (msg), ##__VA_ARGS__); \
+}
 // Estructura basica para textos
 // con control de lineas
 // puede contener track en cada linea individualmente

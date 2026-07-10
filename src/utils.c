@@ -140,6 +140,7 @@ void content_add_char(content_t *cont, int line_index, const char c) {
 
 };
 void content_add_track(content_t *cont, track_t *track) {
+    /***
     // guardamos la linea donde queremos insertar el track
     int index = cont->numlines;
     // Solo añadimos contenido si nos han pasado un track valido
@@ -150,8 +151,10 @@ void content_add_track(content_t *cont, track_t *track) {
         cont->tracks[index] = track;
         free(tmp_text);
    }
+   ***/
 }
 int content_add_playlist(content_t *cont, playlist_t *playlist) {
+    /***
     // guardamos la linea donde queremos insertar la playlist
     int index = cont->numlines; 
     if (deezer_playlist_is_valid(playlist)) {
@@ -162,6 +165,7 @@ int content_add_playlist(content_t *cont, playlist_t *playlist) {
         free(tmp_text);
         return 0;
     }
+    ***/
     return 1;
 }
 int content_add_playlist_in_row(content_t *cont, playlist_t *playlist, int line_index) {
@@ -235,10 +239,12 @@ void content_clear(content_t *cont) {
             free(cont->text[i]);
             cont->text[i] = NULL;
         }
+        /***
         if (cont->tracks[i] != NULL) {
             deezer_track_free(cont->tracks[i]);
             cont->tracks[i] = NULL;
         }
+        ***/
     }
     // liberamos el espacio de content->text
     if (cont->text != NULL) {
