@@ -21,6 +21,8 @@ enum deecer_result {
     DC_ERROR_MEMORY_MAP_FAILED = -2,
     DC_ERROR_UNKNOWN = -5,
     DC_ERROR_CURL_RESPONSE_ERROR = -6,
+    DC_ERROR_CURL_INIT = -7,
+    DC_ERROR_CJSON_CREATING = -8,
 };
 
 #endif
