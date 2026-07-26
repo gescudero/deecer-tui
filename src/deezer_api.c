@@ -57,13 +57,34 @@ static playlist_t **playlists = NULL;
  *
  * private functions
  *
- ******************/
+******************/
+// Constructores
+static int deezer_create_client(); 
+static int deezer_create_user(); 
+// funciones para gestionar la pool y convertir los json
+// track
+static int deezer_get_track_from_json(const cJSON *json_track, track_t **track);
+static track_t *deezer_get_track_from_pool(int id);
+static int deezer_add_track(track_t *track);
+static bool deezer_track_exists(int id);
+// artist
+static int deezer_get_artist_from_json(const cJSON *json_artist, artist_t **artist);
+static artist_t *deezer_get_artist_from_pool(int id);
+static int deezer_add_artist(artist_t *artist);
+static bool deezer_artist_exists(int id);
+// album
+static int deezer_get_album_from_json(const cJSON *json_album, album_t **album);
+static album_t *deezer_get_album_from_pool(int id);
+static int deezer_add_album(album_t *album);
+static bool deezer_album_exists(int id);
+
 // direct request to api
 static int deezer_get_user_data(user_t *user);
 static int deezer_get_track_data(track_t *track, int id);
 static int deezer_get_artist_data(artist_t *artist, int id);
 static int deezer_get_album_data(album_t *album, int id);
 static int deezer_get_playlist_data(playlist_t *playlist, int id);
+static int deezer_get_media_url(track_t *track);
 
 // libcurl
 static size_t writecallback(char *contents, size_t size, size_t nmemb, void *userp);
@@ -72,17 +93,18 @@ static int deezer_curl_set_headers(bool needToken);
 static int deezer_curl_set_url(enum deezer_requests request); 
 static int deezer_curl_set_post_json(enum deezer_requests request, const char *param);
 
-// cJSON
-static track_t* deezer_convert_json_to_track(cJSON *json_track);
-static artist_t* deezer_convert_json_to_artist(cJSON *json_artist);
-static album_t* deezer_convert_json_to_album(cJSON *json_album);
-
 /*******************
  *
  * Definitions
  *
  ******************/
-// inicializador
+
+/**
+ * Init deezer client. Make a request to get token 
+ *
+ * @param configuration struct 
+ * @return error code 
+ */
 int deezer_init(config_t *config) {
     int err_code = 0;
     // creamos el objeto para el cliente
@@ -90,7 +112,7 @@ int deezer_init(config_t *config) {
     if (DC_SUCCESS != err_code) {
         return err_code;
     }
-    LOG("Hemos creado el cliente\n");
+    LOG("Hemos creado el cliente deezer. Un simple calloc.\n");
     
     // añadimos el arl antes de intentar conectar
     client->arl = config->arl;
@@ -111,15 +133,15 @@ int deezer_init(config_t *config) {
 
     return DC_SUCCESS;
 }
-// constructores
-int deezer_create_client()  {
+
+static int deezer_create_client()  {
     client = calloc(1, sizeof(deezer_client_t));
     if (client == NULL) {
         return DC_ERROR_INICIALIZATION_FAILED;
     }
     return DC_SUCCESS;
 }
-int deezer_create_user() {
+static int deezer_create_user() {
     // reservamos la memoria para la usuaria
     user = calloc(1, sizeof(user_t));
     if (user == NULL) {
@@ -148,7 +170,7 @@ int deezer_create_user() {
             // comprobamos que hayamos recibido un json
             if (strstr(contenttype, "application/json")) {
                 LOG("La solicitud ha ido bien y tenemos una respuesta en json.\n");
-                LOG("%s\n", client->mem.memory);
+                // LOG("%s\n", client->mem.memory);
                 cJSON *json = cJSON_Parse(client->mem.memory);
                 if (json == NULL || cJSON_IsInvalid(json) || !cJSON_IsObject(json)) {
                     //liberamos el objeto json y salimos (petará si es null??)
@@ -202,14 +224,156 @@ int deezer_create_user() {
     LOG("api token: %s\n", client->api_token);
     return DC_SUCCESS;
 }
-track_t *deezer_create_track();
-artist_t *deezer_create_artist();
-album_t *deezer_create_album();
-playlist_t *deezer_create_playlist();
 
-// JSON conversions
+/**
+ * Add track to the tracks pool
+ *
+ * @param track The track pointer to add to the pool
+ * @return RESULT CODE
+ */
+static int deezer_add_track(track_t *track) {
+    LOG("Añadimos un track a la pool.\n");
+    if (track == NULL) {
+        return DC_ERROR_INICIALIZATION_FAILED; 
+    }
+    if (0 == nb_tracks) {
+        tracks = calloc (1, sizeof(track_t*));
+        if (tracks == NULL) {
+            return DC_ERROR_MEMORY_MAP_FAILED;
+        }
+    } else {
+        // creamos un puntero temporal donde pedimos el espacio,
+        // no queremos perder nuestro tracks bueno
+        track_t **tmp_tracks = realloc(tracks, (nb_tracks + 1) * sizeof(track_t*));
+        if (tmp_tracks == NULL) {
+            return DC_ERROR_MEMORY_MAP_FAILED;
+        }
+        tracks = tmp_tracks;
+    }
 
+    tracks[nb_tracks] = track;
+    nb_tracks++;
+    return DC_SUCCESS;
+}
+/**
+ * Add artist to the tracks pool
+ *
+ * @param artist The artist pointer to add to the pool
+ * @return RESULT CODE
+ */
+static int deezer_add_artist(artist_t *artist) {
+    LOG("Añadimos un artist a la pool.\n");
+    if (artist == NULL) {
+        return DC_ERROR_INICIALIZATION_FAILED; 
+    }
+    if (0 == nb_artists) {
+        artists = calloc (1, sizeof(artist_t*));
+        if (artists == NULL) {
+            return DC_ERROR_MEMORY_MAP_FAILED;
+        }
+    } else {
+        // creamos un puntero temporal donde pedimos el espacio,
+        // no queremos perder nuestra lista de artists
+        artist_t **tmp_artists = realloc(artists, (nb_artists + 1) * sizeof(artist_t*));
+        if (tmp_artists == NULL) {
+            return DC_ERROR_MEMORY_MAP_FAILED;
+        }
+        artists = tmp_artists;
+    }
 
+    artists[nb_artists] = artist;
+    nb_artists++;
+    return DC_SUCCESS;
+}
+
+/**
+ * Get track from pool
+ *
+ * @param track id
+ * @return track_t pointer 
+ */
+static track_t *deezer_get_track_from_pool(int id) {
+   for (int i=0; i < nb_tracks; i++) {
+       if (id == tracks[i]->id) {
+           return tracks[i];
+       }
+   }
+   return NULL;
+}
+/**
+ * Get artist from pool. Can use deezer_artist_exists first
+ * to avoid null return
+ * 
+ * @param artist id
+ * @return artist_t pointer
+ */
+static artist_t *deezer_get_artist_from_pool(int id) {
+    for (int i=0; i < nb_artists; i++) {
+        if (id == artists[i]->id) {
+            return artists[i];
+        }
+    }
+    return NULL;
+}
+
+/**
+ * Get album from pool. Can use deezer_album_exists first
+ * to avoid null return
+ * 
+ * @param album id
+ * @return album_t pointer
+ */
+static album_t *deezer_get_album_from_pool(int id) {
+    for (int i=0; i < nb_albums; i++) {
+        if (id == albums[i]->id) {
+            return albums[i];
+        }
+    }
+    return NULL;
+}
+/**
+ * Check if track id exists on pool
+ *
+ * @param track id 
+ * @return boolean
+ */
+static bool deezer_track_exists(int id) {
+    for (int i=0; i < nb_tracks; i++) {
+       if (id == tracks[i]->id) {
+           return true;
+       }
+    }
+    return false;
+}
+/**
+ * Check if artist id exists on pool
+ *
+ * @param artist id 
+ * @return boolean
+ */
+static bool deezer_artist_exists(int id) {
+    for (int i=0; i < nb_artists; i++) {
+       if (id == artists[i]->id) {
+           return true;
+       }
+    }
+    return false;
+}
+
+/**
+ * Check if album id exists on pool
+ * 
+ * @param album id
+ * @return boolean
+ */
+static bool deezer_album_exists(int id) {
+    for (int i=0; i < nb_albums; i++) {
+        if (id == albums[i]->id) {
+            return true;
+        }
+    }
+    return false;
+}
 
 // public actions
 content_t *deezer_search(const char *query) {
@@ -223,44 +387,99 @@ content_t *deezer_search(const char *query) {
     deezer_curl_set_headers(true);
     // seteamos la url
     deezer_curl_set_url(DC_PAGE_SEARCH);
-    // contruimos el json del post
+    // construimos el json del post
     deezer_curl_set_post_json(DC_PAGE_SEARCH, query);
-    // realizamos la request y guardamos el codigo de error
+    // comprobamos que tengamos el handle
     if (client->curl_handle == NULL) {
         LOG("el handle es null\n");
     }
-    LOG("el curl_res es %d\n", client->curl_res);
-    
+    // liberamos el contenedor de los datos de la respuesta,
+    // asi nos aseguramos que no nos queden restos de alguna
+    // request anterior
+    free(client->mem.memory);
+    client->mem.memory = NULL;
+    client->mem.size = 0;
+    // realizamos la request y guardamos el codigo de error
     client->curl_res = curl_easy_perform(client->curl_handle);
     LOG("Realizada request de busqueda.\n");
+    // comprobamos el codigo de respuesta.
     if (CURLE_OK != client->curl_res) {
         LOG("No hemos tenido una respues amigable\n");
         content_add_line(resp, "Parece que no hemos tenido una respuesta amigable al buscar.");
-    } else {
-        LOG("La request ha ido bien\n");
-        char *contenttype = NULL;
-        client->curl_res = curl_easy_getinfo(client->curl_handle, CURLINFO_CONTENT_TYPE, &contenttype);
+        return resp;
+    }
 
-        if ((CURLE_OK == client->curl_res) && contenttype) {
-            LOG("contenttype: %s", contenttype);
-            if (strstr(contenttype, "application/json")) {
-                //tenemos un json
-                LOG("La respuesta de la busqueda:\n%s\n", client->mem.memory);
+    LOG("La request ha ido bien\n");
+    char *contenttype = NULL;
+    client->curl_res = curl_easy_getinfo(client->curl_handle, CURLINFO_CONTENT_TYPE, &contenttype);
 
+    if ((CURLE_OK == client->curl_res) && contenttype) {
+        LOG("contenttype: %s\n", contenttype);
+        if (strstr(contenttype, "application/json")) {
+            //tenemos un json
+            // LOG("La respuesta de la busqueda:\n%s\n", client->mem.memory);
+            // objeto que contiene el json global
+            cJSON *json = cJSON_Parse(client->mem.memory);
+            // LOG("json: %s\n", cJSON_Print(json));
+            // Queremos quedarnos con la lista de TRACK
+            cJSON *json_results = cJSON_GetObjectItem(json, "results"); // incluye todos los results
+            // LOG("results: %s\n", cJSON_Print(json_results));
+            cJSON *json_tracks = cJSON_GetObjectItem(json_results, "TRACK"); // incluye la info de tracks
+            // LOG("track: %s\n", cJSON_Print(json_tracks));
+            cJSON *json_data = cJSON_GetObjectItem(json_tracks, "data"); // array con los tracks
+
+            LOG("Tenemos un json. Vamos a recorrer el array de tracks.\n");
+            // LOG("data: %s\n", cJSON_Print(json_data));
+            // debo devolver un content_t con una lista de tracks, para ello
+            // tengo que añadirlos tracks a la pool y componer el content_t
+            if (cJSON_IsArray(json_data)) {
+                cJSON *iterator = NULL;
+                LOG("Vamos a recorrer el array de tracks\n");
+                cJSON_ArrayForEach(iterator, json_data) {
+                    track_t *track = NULL;
+                    if (deezer_get_track_from_json(iterator, &track) == DC_SUCCESS) {
+                        LOG("Añadimos un track al content. %s \n", track->title);
+                        content_add_track(resp, track);
+                    }
+                }
+            } else {
+                LOG("No es un array??\n");
             }
         }
     }
+    LOG("devolvemos resp con %zu tracks\n", resp->numlines );
     return resp;
 }
 
-
 // getters (pide el objeto a la pool, y si no existe
 // lo pedira a la api)
-user_t *deezer_get_user(int id);
-track_t *deezer_get_track(int id); 
-artist_t *deezer_get_artist(int id); 
-album_t *deezer_get_album(int id);
-playlist_t *deezer_get_playlist(int id);
+user_t *deezer_get_user(int id) {
+    //not IMPLEMENTED
+    user_t *user;
+    return user;
+}
+track_t *deezer_get_track(int id) {
+    // NOT IMPLEMENTED
+    track_t *track;
+    return track;
+} 
+artist_t *deezer_get_artist(int id) {
+    // NOT IMPLEMENTED
+    artist_t *artist;
+    return artist;
+}
+album_t *deezer_get_album(int id) {
+    // NOT IMPLEMENTED
+    album_t *album;
+    return album;
+}
+playlist_t *deezer_get_playlist(int id) {
+    // NOt IMPLEMENTED
+    playlist_t *playlist;
+    return playlist;
+}
+
+
 
 // comprobadores
 bool deezer_arl_is_valid(const char *arl) {
@@ -274,12 +493,21 @@ bool deezer_arl_is_valid(const char *arl) {
     return true;
 }
 bool deezer_track_is_valid(track_t *track) {
-    // NOT IMPLEMENTED
-    return false;
+    LOG("deezer_track_is_valid-0\n");
+    if (track == NULL) {
+        return false;
+    }
+    if (0 >= track->id) {
+        LOG("deezer_track_is_valid-1\n");
+        return false;
+    }
+    LOG("deezer_track_is_valid-2\n");
+    return true;
+    
 }
 bool deezer_artist_is_valid(artist_t *artist) {
     // NOT IMPLEMENTED
-    return false;
+    return true;
 }
 bool deezer_album_is_valid(album_t *album) {
     // NOT IMPLEMENTED
@@ -301,6 +529,106 @@ void deezer_free_track(track_t *track);
 void deezer_free_artist(artist_t *artist);
 void deezer_free_album(album_t *album);
 void deezer_free_playlist(playlist_t *playlist);
+
+/***************
+ *
+ * JSON converters
+ *
+ ***************/
+static int deezer_get_track_from_json(const cJSON *json_track, track_t **track) {
+    LOG("Nos piden sacar un track de un json\n")
+    if (!cJSON_IsObject(json_track)) {
+        return DC_ERROR_CJSON_INVALID;
+    }    
+    cJSON *id = cJSON_GetObjectItem(json_track, "SNG_ID");
+    LOG("id: %s\n", cJSON_Print(id));
+    
+    // una vez que tenemos el id, buscamos si ya tenemos ese track
+    // en la pool, si es así, devolvemos el track desde la pool
+    if (deezer_track_exists(atoi(id->valuestring))) {
+        //buscar el track en la pool y retornarlo
+        *track = deezer_get_track_from_pool(atoi(id->valuestring));
+        return DC_SUCCESS;
+    }
+
+    // si no es asi, lo tenemos que desmembrar y añadir
+    cJSON *title = cJSON_GetObjectItem(json_track, "SNG_TITLE");
+    LOG("title: %s\n", cJSON_Print(title));
+    cJSON *token = cJSON_GetObjectItem(json_track, "TRACK_TOKEN");
+    cJSON *token_expire = cJSON_GetObjectItem(json_track, "TRACK_TOKEN_EXPIRE");
+    cJSON *artist = cJSON_GetObjectItem(json_track, "ARTISTS"); // array de artists
+    cJSON *album_id = cJSON_GetObjectItem(json_track, "ALB_ID");
+    
+    *track = calloc(1, sizeof(track_t));
+    if (*track == NULL) {
+        return DC_ERROR_MEMORY_MAP_FAILED;
+    }
+    if (cJSON_IsString(id)){
+        (*track)->id = atoi(id->valuestring);
+    }
+    if (cJSON_IsString(title)) {
+        (*track)->title = strdup(title->valuestring);
+    }
+    if (cJSON_IsString(token)) {
+        (*track)->token = strdup(token->valuestring);
+    }
+    if (cJSON_IsNumber(token_expire)) {
+        (*track)->token_expire = (time_t)token_expire->valuedouble;
+    }
+    
+    if (cJSON_IsArray(artist))
+    {
+        cJSON *iterator = NULL;
+        cJSON_ArrayForEach(iterator, artist) {
+            artist_t *artist = NULL;
+            if (deezer_get_artist_from_json(iterator, &artist) == DC_SUCCESS) {
+                if (0 == (*track)->nb_artists) {
+                    (*track)->artist = calloc(1, sizeof(artist_t*));
+                } else {
+                    (*track)->artist = realloc((*track)->artist, ((*track)->nb_artists + 1) * sizeof(artist_t*) );
+                }
+                (*track)->artist[(*track)->nb_artists] = artist;
+                (*track)->nb_artists++;
+            }
+        }
+    }
+    LOG("Hemos encontrado un track en el json.\n");
+    LOG("track->title: %s\n", (*track)->title)
+    // media_url se consigue haciendo request a https://media.deezer.com/v1/get_url, la haremos cuando
+    // se pida reproducir y entonces la guardaremos
+    
+    // Añadimos el track a la pool
+    return deezer_add_track(*track);
+}
+static int deezer_get_artist_from_json(const cJSON *json_artist, artist_t **artist) {
+    //LOG("Nos piden sacar un artist de este json.\n%s\n", cJSON_Print(json_artist));
+    if (!cJSON_IsObject(json_artist)) {
+        return DC_ERROR_CJSON_INVALID;
+    }
+    cJSON *id = cJSON_GetObjectItem(json_artist, "ART_ID");
+    if (deezer_artist_exists(atoi(id->valuestring))) {
+        *artist = deezer_get_artist_from_pool(atoi(id->valuestring));
+        return DC_SUCCESS;
+    }
+    cJSON *name = cJSON_GetObjectItem(json_artist, "ART_NAME");
+    *artist = calloc(1, sizeof(artist_t));
+    if (*artist == NULL) {
+        return DC_ERROR_MEMORY_MAP_FAILED;
+    }
+    if (cJSON_IsString(id)) {
+        (*artist)->id = atoi(id->valuestring);
+    }
+    if (cJSON_IsString(name)) {
+        (*artist)->name = strdup(name->valuestring);
+    }
+    LOG("Añadimos a la pool. artist: %s\n", (*artist)->name);
+    return deezer_add_artist(*artist);
+}
+static album_t* deezer_convert_json_to_album(cJSON *json_album) {
+    // NOT IMPLEMENTED
+    album_t *album = NULL;
+    return album;
+}
 
 /****************
  *
@@ -383,12 +711,10 @@ static int deezer_curl_set_url(enum deezer_requests request) {
     LOG("La url final es: %s\n", url);
     // creamos las opciones de curl
     curl_easy_setopt(client->curl_handle, CURLOPT_URL, url);
-    // liberamos url que ya no lo necesitamos
-    //free(url);
     return DC_SUCCESS;
 }
 static int deezer_curl_set_post_json(enum deezer_requests request, const char *param) {
-    LOG("Entrando en... deezer_curl_set_post_json()");
+    LOG("Entrando en... deezer_curl_set_post_json()\n");
     char *post_data = NULL;
     cJSON *json = cJSON_CreateObject();
     if (json == NULL) {
@@ -460,9 +786,9 @@ static int deezer_curl_set_post_json(enum deezer_requests request, const char *p
             QUERY = cJSON_CreateString(param);
             start = cJSON_CreateNumber(0);
             nb = cJSON_CreateNumber(20);
-            suggest = cJSON_CreateBool(false);
-            artist_suggest = cJSON_CreateBool(false);
-            top_tracks = cJSON_CreateBool(false);
+            suggest = cJSON_CreateBool(true);
+            artist_suggest = cJSON_CreateBool(true);
+            top_tracks = cJSON_CreateBool(true);
             if (!query || !QUERY || !start || !nb || !suggest || !artist_suggest || !top_tracks) {
                 cJSON_Delete(json);
                 return DC_ERROR_CJSON_CREATING;
@@ -501,8 +827,8 @@ static int deezer_curl_set_post_json(enum deezer_requests request, const char *p
     // limpiamos
     cJSON_Delete(json);
     LOG("Se libera el json\n");
-    //free(post_data);
-    LOG("Se libera post_data\n");
+    free(post_data);
+    LOG("Se libera post_data (podemos hacerlo al usar CURLOPT_COPYPOSTFIELDS)\n");
     return DC_SUCCESS;
 }
 static size_t writecallback(char *contents, size_t size, size_t nmemb, void *userp) {

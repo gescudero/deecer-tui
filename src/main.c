@@ -64,6 +64,12 @@ int main() {
                 content_t *resp = deezer_search(ui_response);
                 
                 if (resp != NULL) {
+                    LOG("Hemos recibido los resultados de la busqueda.\n");
+                    if (resp->numlines > 0) {
+                        LOG("linea 1: %s\n", resp->text[0]);
+                    } else {
+                        LOG("No hay texto.\n");
+                    }
                     // seteamos el contenido
                     center_set_content(resp);
                     // if (deezer_playlist_is_valid(resp->playlists[0])) {

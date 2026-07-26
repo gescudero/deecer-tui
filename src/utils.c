@@ -140,15 +140,23 @@ void content_add_char(content_t *cont, int line_index, const char c) {
 
 };
 void content_add_track(content_t *cont, track_t *track) {
+    LOG("content_add_track-0\n");
     // guardamos la linea donde queremos insertar el track
     int index = cont->numlines;
     // Solo añadimos contenido si nos han pasado un track valido
     if (deezer_track_is_valid(track)) {
+        LOG("content_add_track-1\n");
         char *tmp_text;
-        asprintf(&tmp_text, "%s (%s)", track->title, track->artist[0]->name) ;
+        if (0 < track->nb_artists) {
+            asprintf(&tmp_text, "%s (%s)", track->title, track->artist[0]->name);
+        } else {
+            asprintf(&tmp_text, "%s", track->title);
+        }
+        LOG("content_add_track-2\n");
         content_add_line(cont, tmp_text);
         cont->tracks[index] = track;
         free(tmp_text);
+        LOG("content_add_track-3\n");
    }
 }
 int content_add_playlist(content_t *cont, playlist_t *playlist) {

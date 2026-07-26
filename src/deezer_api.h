@@ -39,7 +39,7 @@ struct track_t {
     int id; //results:DATA:SNG_ID
     char *title; //results:DATA:SNG_TITLE
     char *token; //results:TRACK_TOKEN
-    time_t *token_expire; //results:TRACK_TOKEN_EXPIRE
+    time_t token_expire; //results:TRACK_TOKEN_EXPIRE
     artist_t **artist; //results:ARTISTS ->
     int nb_artists; // number of artists 
     album_t *album; //results:ALB_ID ->
@@ -73,14 +73,6 @@ struct playlist_t {
 // para arrancar el cliente y el pool de objetos
 // solo se debe ejecutar una vez
 int deezer_init(config_t *config);
-
-// constructores
-int deezer_create_client();
-int deezer_create_user();
-track_t *deezer_create_track();
-artist_t *deezer_create_artist();
-album_t *deezer_create_album();
-playlist_t *deezer_create_playlist();
 
 // utilities
 content_t *deezer_search(const char *query);
