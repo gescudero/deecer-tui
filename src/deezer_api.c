@@ -33,7 +33,7 @@ enum deezer_requests {
     DC_PAGE_HOME,
     DC_PAGE_TRACK,
     DC_PAGE_PROFILE,
-
+    DC_PAGE_MEDIA_GET_URL,
 };
 /*****************
 *
@@ -84,7 +84,7 @@ static int deezer_get_track_data(track_t *track, int id);
 static int deezer_get_artist_data(artist_t *artist, int id);
 static int deezer_get_album_data(album_t *album, int id);
 static int deezer_get_playlist_data(playlist_t *playlist, int id);
-static int deezer_get_media_url(track_t *track);
+static int deezer_get_media_url(track_t **track);
 
 // libcurl
 static size_t writecallback(char *contents, size_t size, size_t nmemb, void *userp);
@@ -251,6 +251,8 @@ static int deezer_add_track(track_t *track) {
         tracks = tmp_tracks;
     }
 
+    // antes de añadirlo, vamos a conseguir la media-url
+    deezer_get_media_url(&track);
     tracks[nb_tracks] = track;
     nb_tracks++;
     return DC_SUCCESS;
@@ -630,6 +632,87 @@ static album_t* deezer_convert_json_to_album(cJSON *json_album) {
     return album;
 }
 
+/**
+ * Get url for downloading media
+ *
+ * @param pointer to track pointer
+ * @return error code
+ */
+static int deezer_get_media_url(track_t **track) {
+    if (*track == NULL) {
+        return DC_ERROR_UNKNOWN;
+    }
+    deezer_curl_set_headers(true);
+    deezer_curl_set_url(DC_PAGE_MEDIA_GET_URL);
+    deezer_curl_set_post_json(DC_PAGE_MEDIA_GET_URL, (*track)->token);
+    // comprobamos que tengamos el handle
+    if (client->curl_handle == NULL) {
+        LOG("el handle es null\n");
+        return DC_ERROR_CURL_INIT;
+    }
+    // liberamos el contenedor de los datos de la respuesta,
+    // asi nos aseguramos que no nos queden restos de alguna
+    // request anterior
+    free(client->mem.memory);
+    client->mem.memory = NULL;
+    client->mem.size = 0;
+    // realizamos la request y guardamos el codigo de error
+    client->curl_res = curl_easy_perform(client->curl_handle);
+    
+    if (CURLE_OK != client->curl_res) {
+        LOG("No hemos tenido una respues amigable\n");
+        return DC_ERROR_CURL_RESPONSE_ERROR;
+    }
+
+    LOG("La request de la media-url ha ido bien\n");
+    char *contenttype = NULL;
+    client->curl_res = curl_easy_getinfo(client->curl_handle, CURLINFO_CONTENT_TYPE, &contenttype);
+
+    if ((CURLE_OK == client->curl_res) && contenttype) {
+        LOG("contenttype: %s\n", contenttype);
+        if (strstr(contenttype, "application/json")) {
+            //tenemos un json
+            //LOG("La respuesta de la get_media_url:\n%s\n", client->mem.memory);
+            // objeto que contiene el json global
+            cJSON *json = cJSON_Parse(client->mem.memory);
+            
+            cJSON *data = cJSON_GetObjectItem(json, "data");
+            if (!cJSON_IsArray(data)) {
+                return DC_ERROR_CURL_RESPONSE_ERROR;
+            }
+            LOG("tenemos data\n");
+            
+            cJSON *data_item = cJSON_GetArrayItem(data, 0);
+            if (!data_item) {
+                return DC_ERROR_CURL_RESPONSE_ERROR;
+            }
+            cJSON *media = cJSON_GetObjectItem(data_item, "media");
+            if (!cJSON_IsArray(media)) {
+                return DC_ERROR_CURL_RESPONSE_ERROR;
+            }
+            LOG("Tenemos media\n");
+
+            cJSON *media_item = cJSON_GetArrayItem(media, 0);
+            if (!media_item) {
+                return DC_ERROR_CURL_RESPONSE_ERROR;
+            }
+            cJSON *sources = cJSON_GetObjectItem(media_item, "sources");
+            if (!cJSON_IsArray(sources)) {
+                return DC_ERROR_CURL_RESPONSE_ERROR;
+            }
+            LOG("Tenemos sources\n");
+            cJSON *sources_item = cJSON_GetArrayItem(sources, 0);
+            cJSON *url = cJSON_GetObjectItem(sources_item, "url");
+            (*track)->media_url = strdup(url->valuestring);
+
+            LOG("Tenemos media_url: %s\n", url->valuestring);
+
+            cJSON_Delete(json);
+        }
+    }
+    return DC_SUCCESS;
+}
+
 /****************
  *
  * CURL helpers
@@ -650,7 +733,7 @@ static int deezer_curl_set_init_options() {
 static int deezer_curl_set_headers(bool needToken) {
     LOG("Entrando en ... deezer_curl_set_headers(bool needToken)\n");
     // Creamos los headers [man CURLOPT_HTTPHEADER]
-    struct curl_slist *list;
+    struct curl_slist *list = NULL;
     char *cookie = NULL;
     if (needToken) {
         asprintf(&cookie, "Cookie: arl=%s; sid=%s", client->arl, client->session_id);
@@ -672,7 +755,7 @@ static int deezer_curl_set_headers(bool needToken) {
     
 }
 static int deezer_curl_set_url(enum deezer_requests request) {
-    LOG("Entrando en ... deezer_curl_set_l(enum deezer_requests request)\n");
+    LOG("Entrando en ... deezer_curl_set_url(enum deezer_requests request)\n");
     // construimos la url
     char *url = NULL;
 
@@ -701,6 +784,8 @@ static int deezer_curl_set_url(enum deezer_requests request) {
         case DC_PAGE_PROFILE:
             asprintf(&url, "%s?method=deezer.pageProfile&api_version=1.0&api_token=%s&input=3", api_url, client->api_token);
             break;
+        case DC_PAGE_MEDIA_GET_URL:
+            asprintf(&url, "%s", media_url);
         default:
             break;
     }
@@ -813,6 +898,62 @@ static int deezer_curl_set_post_json(enum deezer_requests request, const char *p
             //   "nb": 40
             // }
             break;
+        case DC_PAGE_MEDIA_GET_URL:
+            {
+            // {
+            //     "license_token": "{{license_token}}",
+            //     "media": [
+            //     {
+            //         "type": "FULL",
+            //         "formats": [
+            //         {
+            //             "cipher": "BF_CBC_STRIPE",
+            //             "format": "MP3_128"
+            //         }
+            //         ]
+            //     }
+            //     ],
+            //     "track_tokens": ["{track_token}"]
+            // }
+            cJSON *license_token = NULL;
+            cJSON *media = cJSON_CreateArray();
+            cJSON *mediaobj = cJSON_CreateObject();
+            cJSON *type = NULL;
+            cJSON *formats = cJSON_CreateArray();
+            cJSON *formatobj = cJSON_CreateObject();
+            cJSON *cipher = NULL;
+            cJSON *format = NULL;
+            cJSON *track_tokens = cJSON_CreateArray();
+            cJSON *track_token = NULL;
+            
+            //string pelao que va en root
+            license_token = cJSON_CreateString(client->license_token);
+            // string que va en el mediaobj, que a su vez va en media
+            type = cJSON_CreateString("FULL");
+            cJSON_AddItemToObject(mediaobj, "type", type);
+            // va en formatobj que va dentro de formats que va en media
+            cipher = cJSON_CreateString("BF_CBC_STRIPE");
+            cJSON_AddItemToObject(formatobj, "cipher", cipher);
+            // va en formatobj que va dentro de formats que va en media
+            format = cJSON_CreateString("MP3_320");
+            cJSON_AddItemToObject(formatobj, "format", format);
+
+            cJSON_AddItemToArray(formats, formatobj);
+            cJSON_AddItemToObject(mediaobj, "formats", formats);
+
+            cJSON_AddItemToArray(media, mediaobj);
+            //string token que va dentro de track_tokens
+            track_token = cJSON_CreateString(param);
+            cJSON_AddItemToArray(track_tokens, track_token);
+
+            //Ahora todo va en el objeto json
+            cJSON_AddItemToObject(json, "license_token", license_token);
+            cJSON_AddItemToObject(json, "media", media);
+            cJSON_AddItemToObject(json, "track_tokens", track_tokens);
+            // pasamos el json a string
+            post_data = cJSON_PrintUnformatted(json);
+            break;
+            }
         default:
             // para el resto de casos borramos los parametros que hubiere
             // seteando con un json vacio.

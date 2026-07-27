@@ -88,9 +88,17 @@ int main() {
                 // 
                 content_t *center_content;
                 int selected_line = center_get_selected_line_content(&center_content);
-                
+                LOG("Reproduccion seleccionada\n");
                 // comprobamos que la linea seleccionada sea un track
                 if (content_line_is_track(center_content, selected_line - 1)) {
+                    // hay que descargar el fichero, descodificarlo y reproducirlo
+                    // ya veremos quien hace cada cosa 
+                    track_t *track = center_content->tracks[selected_line - 1];
+                    if (track != NULL) {
+                        LOG("url de descarga: %s\n", track->media_url);
+                    }
+                    LOG("Has seleccionado reproducir %s\n", track->title);
+
                     // ejecutamos la reproduccion en un thread aparte (parece que funciona!!)    
                     // if (pthread_create(&player_thread, NULL, thread_player_openurl, (void*)center_content->tracks[selected_line-1]->preview) != 0) {
                     //     fprintf(stderr, "Error creando el thread\n");
