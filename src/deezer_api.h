@@ -1,10 +1,4 @@
-//deezer_priv_api.h
-/******************
- *
- * API privada de deezer 
- * Necesitamos arl para usarla
- *
- ******************/
+//deezer_api.h
 
 #ifndef DEEZER_API_H
 #define DEEZER_API_H
@@ -68,15 +62,39 @@ struct playlist_t {
     track_t **tracks;
 };
 
-// Funcion de inicializacion
-// se encarga de crear todo lo necesario
-// para arrancar el cliente y el pool de objetos
-// solo se debe ejecutar una vez
+/**
+ * Funcion de inicializacion
+ * se encarga de crear todo lo necesario
+ * para arrancar el cliente y el pool de objetos
+ * solo se debe ejecutar una vez
+ *
+ * @param configuracion
+ * @return error code
+ */
 int deezer_init(config_t *config);
 
-// utilities
+/**
+ * Busqueda en deezer de un termino.
+ * Devuelve una lista de tracks en formato
+ * content_t 
+ *
+ * @param el texto de busqueda 
+ * @return content_t con la lista de tracks lista para
+ * imprimir en la ventana center de la ui 
+ */
 content_t *deezer_search(const char *query);
+
+/**
+ * Se solicita el path hasta el fichero de audio
+ * de un track en concreto. La funcion descarga el fichero
+ * encriptado, lo desencripta y escribe en filename la ruta
+ *
+ * @param el struct track con los datos de la cancion que queremos
+ * @param un puntero a string donde escribir el nombre de fichero
+ * @result error code 
+ */
 int deezer_get_media(track_t *track, char **filename);
+
 // getters (pide el objeto a la pool, y si no existe
 // lo pedira a la api)
 user_t *deezer_get_user(int id);
@@ -85,15 +103,59 @@ artist_t *deezer_get_artist(int id);
 album_t *deezer_get_album(int id);
 playlist_t *deezer_get_playlist(int id);
 
-// comprobadores
+/**
+ * Comprueba que el arl pasado por parametro sea un 
+ * token arl válido, o al menos lo parezca
+ *
+ * @param el texto con el arl a comprobar 
+ * @return bool 
+ */
 bool deezer_arl_is_valid(const char *arl);
+
+/**
+ * Comprueba que el track pasado por parametro sea un 
+ * track válido, o al menos lo parezca
+ *
+ * @param el objeto track a comprobar 
+ * @return bool 
+ */
 bool deezer_track_is_valid(track_t *track);
+
+/**
+ * Comprueba que el artist pasado por parametro sea un 
+ * artist válido, o al menos lo parezca
+ *
+ * @param el objeto artist a comprobar 
+ * @return bool 
+ */
 bool deezer_artist_is_valid(artist_t *artist);
+
+/**
+ * Comprueba que el album pasado por parametro sea un 
+ * token arl válido, o al menos lo parezca
+ *
+ * @param el objeto album a comprobar 
+ * @return bool 
+ */
 bool deezer_album_is_valid(album_t *album);
+
+/**
+ * Comprueba que la playlist pasado por parametro sea una 
+ * playlist válida, o al menos lo parezca
+ *
+ * @param la playlist a comprobar 
+ * @return bool 
+ */
 bool deezer_playlist_is_valid(playlist_t *playlist);
 
-// destructores
+/**
+ * Funcion de limpieza del cliente de deezer
+ * incluyendo curl y la pool de tracks, albums, etc
+ * también intentará borrar los ficheros que hayan quedado
+ * descargados (se podrá evitar este comportamiento por configuracion)
+ */
 void deezer_cleanup();
+
 void deezer_free_client(deezer_client_t *client);
 void deezer_free_user(user_t *user);
 void deezer_free_track(track_t *track);
