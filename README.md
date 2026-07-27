@@ -12,8 +12,8 @@ Una de las cosas que puede que te llamen la atención es que este repo esté doc
 - [x] Se pueden hacer búsquedas sencillas a la api pública de deezer y nos devuelve una lista de tracks
 - [x] La reproduccion no para la ui, funciona en un hilo separado
 - [x] Poder reproducir las canciones completas
-- [ ] Reproducir una lista de tracks continua
-- [ ] Reproducir los tracks del resultado de la busqueda como una playlist
+- [x] Reproducir una lista de tracks continua
+- [x] Reproducir los tracks del resultado de la busqueda como una playlist
 - [ ] Mostrar listas de reproduccion del usuario
 - [ ] Completar funciones del menu (Home/Explore/Library/Settings)
 
