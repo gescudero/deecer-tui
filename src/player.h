@@ -2,7 +2,6 @@
 #define PLAYER_H
 
 #include <stdbool.h>
-#include <mpv/client.h>
 
 bool player_init();
 void player_end();

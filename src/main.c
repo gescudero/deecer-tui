@@ -112,6 +112,9 @@ int main() {
                     if (pthread_create(&player_thread, NULL, thread_player_openurl, (void*)filename) != 0) {
                         fprintf(stderr, "Error creando el thread\n");
                     }
+                    char *nowplaying_text = NULL;
+                    asprintf(&nowplaying_text, "%s - %s", track->artist[0]->name, track->title);
+                    now_playing_change_content(nowplaying_text);
                 }
                 break;
             }
@@ -151,6 +154,7 @@ int main() {
                                 free(filepath);
                             }
                             // voy a forzar a descargar cada fichero de momento es temporal
+                            // aunque para listas de 10 o 15 canciones funciona sorprendentemente bien
                             char *filename = NULL;
                             deezer_get_media(center_content->playlists[selected_line-1]->tracks[i], &filename);
                         }

@@ -1,8 +1,8 @@
 #include "player.h"
+#include "utils.h"
 #include <sched.h>
 #include <stddef.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <unistd.h>
 #include <mpv/client.h>
 // EL HANDLE
@@ -13,7 +13,7 @@ static mpv_handle *mpv;
 // debo ajustarla a mis necesidades
 static inline void check_error(int status) {
     if (status < 0) {
-        fprintf(stderr, "mpv API error: %s\n", mpv_error_string(status));
+        LOG("mpv API error: %s\n", mpv_error_string(status));
     }
 }
 static void player_configure(mpv_handle *handle) {
@@ -29,7 +29,7 @@ static void player_configure(mpv_handle *handle) {
 bool player_init() {
     mpv = mpv_create();
     if (!mpv) {
-        fprintf(stderr, "Error creando el contexto de mpv.\n");
+        LOG("Error creando el contexto de mpv.\n");
         player_end();
         return false;
     }
@@ -39,7 +39,7 @@ bool player_init() {
     player_configure(mpv);
     //comprobamos que todo haya salido bien
     if (mpv_initialize(mpv) < 0) {
-        fprintf(stderr, "Error inicializando mpv\n");
+        LOG("Error inicializando mpv\n");
         player_end();
         return false;
     }
@@ -54,10 +54,10 @@ void player_openurl(char *url){
     player_stop();
     const char *cmd[] = {"loadfile", url, NULL};
     check_error(mpv_command(mpv, cmd));
-    fprintf(stderr, "[player] Loadfile command...\n");
+    LOG("[player] Loadfile command...\n");
     while (1) {
         mpv_event *event = mpv_wait_event(mpv, 10000);
-        fprintf(stderr, "event: %s\n", mpv_event_name(event->event_id));
+        LOG("event: %s\n", mpv_event_name(event->event_id));
         if (event->event_id == MPV_EVENT_SHUTDOWN) {
             break;
         }
@@ -68,14 +68,19 @@ void player_openplaylist(char *url) {
     player_stop();
     const char *cmd[] = {"loadlist", url, NULL};
     check_error(mpv_command(mpv,cmd));
-    fprintf(stderr, "[player] Loadlist command...\n");
+    LOG("[player] Loadlist command...\n");
     while (1) {
         mpv_event *event = mpv_wait_event(mpv, 10000);
-        fprintf(stderr, "[playlist] event: %s\n", mpv_event_name(event->event_id));
+        LOG("[playlist] event: %s\n", mpv_event_name(event->event_id));
         if (event->event_id == MPV_EVENT_SHUTDOWN) {
             break;
         } else if (event->event_id == MPV_EVENT_END_FILE) {
-            fprintf(stderr, "MPV_EVENT_END_FILE");
+            // Salta cada vez que acaba una cancion,
+            // asi que aqui deberiamos avisar de que hemos
+            // cambiado de track
+            // NO ESTOY SEGURO
+            LOG("MPV_EVENT_END_FILE");
+
             break;
         }
     }
@@ -83,7 +88,7 @@ void player_openplaylist(char *url) {
 void player_stop() {
     const char *cmd[] = {"stop", "", NULL};
     check_error(mpv_command(mpv, cmd));
-    fprintf(stderr, "[player] Comando stop\n");
+    LOG("[player] Comando stop\n");
 }
 // Resume play 
 void player_play() {
@@ -93,7 +98,7 @@ void player_play() {
     if (pausa > 0) {
         pausa = 0;
         check_error(mpv_set_property(mpv, "pause", MPV_FORMAT_FLAG, &pausa));
-        fprintf(stderr, "[player] Saliendo de la pausa. \n");
+        LOG("[player] Saliendo de la pausa. \n");
     }
 }
 
@@ -102,17 +107,17 @@ void player_pause() {
     // Set a property to a string value
     int pausa = 1;
     check_error(mpv_set_property(mpv, "pause", MPV_FORMAT_FLAG, &pausa));
-    fprintf(stderr, "[player] Pause set property. \n");
+    LOG("[player] Pause set property. \n");
 }
 // Next song on playlist
 void player_forward() {
-    fprintf(stderr, "[player] Solicitada proxima cancion en la lista\n");
+    LOG("[player] Solicitada proxima cancion en la lista\n");
     const char *cmd[] = {"playlist-next", "weak", NULL};
     check_error(mpv_command(mpv, cmd));
 }
 // Previous song on playlist
 void player_back() {
-    fprintf(stderr, "[player] Solicitada anterior cancion en la lista\n");
+    LOG("[player] Solicitada anterior cancion en la lista\n");
     const char *cmd[] = {"playlist-prev", "weak", NULL};
     check_error(mpv_command(mpv, cmd));
 }
@@ -121,11 +126,3 @@ int player_get_time_pos(double *pos) {
     mpv_get_property(mpv, "time-pos", MPV_FORMAT_DOUBLE, pos);
     return 0;
 }
-
-unsigned char* player_download_encrypted_data() {
-    unsigned char* encrypted_data = NULL;
-
-    return encrypted_data;
-}
-
-

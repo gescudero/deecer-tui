@@ -49,5 +49,6 @@ ui_action_t ui_handle_input(char *return_value);
 
 void center_set_content(content_t *content);
 int center_get_selected_line_content(content_t **content);
+void now_playing_change_content(char *text);
 
 #endif

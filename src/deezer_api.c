@@ -208,7 +208,7 @@ static int deezer_get_media_url(track_t **track);
  * @param char **path: path to file. Caller has to free char*
  * @return error code
  */
-static int deezer_download_media_file(track_t *track, char **path);
+static int deezer_download_media_file(track_t *track);
 
 /**
  * Takes crypted file stored locally and generate a new decrypted audio file
@@ -262,6 +262,13 @@ static size_t writecallback(char *contents, size_t size, size_t nmemb, void *use
  * @param stream: file stream where to save data 
  */
 static size_t writefilecallback(void *ptr, size_t size, size_t nmemb, FILE *stream);
+
+static void deezer_free_client(deezer_client_t *client);
+static void deezer_free_user(user_t *user);
+static void deezer_free_track(track_t *track);
+static void deezer_free_artist(artist_t *artist);
+static void deezer_free_album(album_t *album);
+static void deezer_free_playlist(playlist_t *playlist);
 
 /*******************
  *
@@ -386,9 +393,8 @@ int deezer_get_media(track_t *track, char **filename) {
     if (access(*filename, F_OK) == 0) {
         return DC_SUCCESS;
     }
-    char *encrypted_filename = NULL;
     // descargamos el fichero cifrado
-    if (DC_SUCCESS != deezer_download_media_file(track, &(*filename))) {
+    if (DC_SUCCESS != deezer_download_media_file(track)) {
         return DC_ERROR_CURL_RESPONSE_ERROR;
     }
     if (DC_SUCCESS != deezer_decrypt_file(track)) {
@@ -476,15 +482,35 @@ bool deezer_playlist_is_valid(playlist_t *playlist) {
 }
 
 void deezer_cleanup() {
-    // NOT IMPLEMENTED;
+    for (int i=0; i<nb_tracks; i++) {
+        deezer_free_track(tracks[i]);
+    }
+    for (int i=0; i<nb_artists; i++) {
+        deezer_free_artist(artists[i]);
+    }
+    for (int i=0; i<nb_albums; i++) {
+        deezer_free_album(albums[i]);
+    }
+    for (int i=0; i<nb_playlists; i++) {
+        deezer_free_playlist(playlists[i]);
+    }
+    deezer_free_user(user);
+    deezer_free_client(client);
+
+    if (tracks) {
+        free(tracks);
+    }
+    if (artists) {
+        free(artists);
+    }
+    if (albums) {
+        free(albums);
+    }
+    if (playlists) {
+        free(playlists);
+    }
     return;
 }
-void deezer_free_client(deezer_client_t *client);
-void deezer_free_user(user_t *user);
-void deezer_free_track(track_t *track);
-void deezer_free_artist(artist_t *artist);
-void deezer_free_album(album_t *album);
-void deezer_free_playlist(playlist_t *playlist);
 
 /*******************
  *
@@ -882,12 +908,13 @@ static int deezer_get_media_url(track_t **track) {
     curl_easy_reset(client->curl_handle);
     return DC_SUCCESS;
 }
-static int deezer_download_media_file(track_t *track, char **path) {
+static int deezer_download_media_file(track_t *track) {
+    char *path = NULL;
     if (!client->curl_handle) {
         return DC_ERROR_CURL_INIT;
     }
-    asprintf(&(*path), "/tmp/%d-crypt.mp3", track->id);
-    FILE *fp = fopen(*path, "wb");
+    asprintf(&path, "/tmp/%d-crypt.mp3", track->id);
+    FILE *fp = fopen(path, "wb");
     curl_easy_setopt(client->curl_handle, CURLOPT_URL, track->media_url);
     curl_easy_setopt(client->curl_handle, CURLOPT_WRITEFUNCTION, writefilecallback);
     curl_easy_setopt(client->curl_handle, CURLOPT_WRITEDATA, fp);
@@ -895,7 +922,7 @@ static int deezer_download_media_file(track_t *track, char **path) {
     client->curl_res = curl_easy_perform(client->curl_handle);
     fclose(fp);
     curl_easy_reset(client->curl_handle);
-    
+    free(path);
     if (CURLE_OK == client->curl_res) {
         return DC_SUCCESS;
     } else {
@@ -1225,5 +1252,41 @@ static size_t writecallback(char *contents, size_t size, size_t nmemb, void *use
 static size_t writefilecallback(void *ptr, size_t size, size_t nmemb, FILE *stream) {
     // Escribimos directamente a fichero conforme vamos recibiendo
     return fwrite(ptr, size, nmemb, stream);
+}
+
+static void deezer_free_client(deezer_client_t *client) {
+    free(client->session_id);
+    free(client->api_token);
+    free(client->license_token);
+    free(client->mem.memory);
+    curl_easy_cleanup(client->curl_handle);
+    free(client);
+}
+static void deezer_free_user(user_t *user) {
+    free(user->name);
+    free(user->email);
+    free(user->lovedtracks_id); 
+    free(user->user_token);
+    free(user);
+}
+static void deezer_free_track(track_t *track) {
+    free(track->title);
+    free(track->token);
+    free(track->artist);
+    free(track->media_url);
+}
+static void deezer_free_artist(artist_t *artist) {
+    free(artist->name);
+    free(artist->tops);
+    free(artist->albums);
+}
+static void deezer_free_album(album_t *album) {
+    free(album->title);
+    free(album->artists);
+    free(album->tracks);
+}
+static void deezer_free_playlist(playlist_t *playlist) {
+    free(playlist->title);
+    free(playlist->tracks);
 }
 

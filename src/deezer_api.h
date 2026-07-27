@@ -166,11 +166,5 @@ bool deezer_playlist_is_valid(playlist_t *playlist);
  */
 void deezer_cleanup();
 
-void deezer_free_client(deezer_client_t *client);
-void deezer_free_user(user_t *user);
-void deezer_free_track(track_t *track);
-void deezer_free_artist(artist_t *artist);
-void deezer_free_album(album_t *album);
-void deezer_free_playlist(playlist_t *playlist);
 
 #endif

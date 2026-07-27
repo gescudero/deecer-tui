@@ -20,6 +20,7 @@ static section_t menu = {0};
 static section_t search = {0};
 static section_t center = {0};
 static section_t playerui = {0};
+static section_t now_playing = {0};
 
 
 /****************
@@ -59,7 +60,9 @@ static void center_create_content();
 static int playerui_create_window();
 static void playerui_create_content();
 static ui_action_t playerui_get_selected_action();
-
+//now playing 
+static int now_playing_create_window();
+static void now_playing_create_content();
 /*******************
  *
  * public funcions (declared in ui.h)
@@ -202,6 +205,7 @@ static void ui_init_content() {
     search_create_content();
     center_create_content();
     playerui_create_content();
+    now_playing_create_content();
 }
 static bool ui_init_windows() {
 // funciones de inicializacion de ncurses
@@ -232,6 +236,9 @@ static bool ui_init_windows() {
         return false;
     }
     if (!playerui_create_window()) {
+        return false;
+    }
+    if (!now_playing_create_window()) {
         return false;
     }
 
@@ -470,7 +477,7 @@ static void menu_create_content() {
     content_add_line(menu.content, "Settings");
 }
 static int menu_create_window() {
-    menu.name = "name";
+    menu.name = strdup("name");
     menu.height = 6;
     menu.width = 16;
     menu.starty = MARGIN;
@@ -499,9 +506,9 @@ static void search_create_content() {
     search.content = content_create(2); // inicializamos la memoria con 2 lineas de maximo.
 }
 static int search_create_window() {
-    search.name = "search";
+    search.name = strdup("search");
     search.height = 3;
-    search.width = screen_width - (menu.width + (MARGIN*2));
+    search.width = (screen_width - (menu.width + (MARGIN*2)))/2;
     search.starty = MARGIN;
     search.startx = menu.width + (MARGIN*2);
 
@@ -530,7 +537,7 @@ static void search_init_text() {
  *
  *************/
 static int center_create_window() {
-    center.name = "center";
+    center.name = strdup("center");
     center.height = screen_height - (search.height + MARGIN + 3);
     center.width = screen_width - (menu.width + (MARGIN*2));
     center.starty = search.height + (MARGIN);
@@ -589,7 +596,7 @@ int center_get_selected_line_content(content_t **content) {
  *
  ***********/
 static int playerui_create_window() {
-    playerui.name = "playerui";
+    playerui.name = strdup("playerui");
     playerui.height = screen_height - (search.height + center.height + MARGIN);
     playerui.width = 2;
     for (int i=0; i<playerui.content->numlines; i++) {
@@ -642,3 +649,38 @@ static ui_action_t playerui_get_selected_action() {
             break;
     }
 }
+
+/**********
+ *
+ * now playing section
+ *
+ *********/
+static int now_playing_create_window() {
+    now_playing.name = strdup("now_playing");
+    now_playing.height = 3;
+    now_playing.width = screen_width - (menu.width + search.width + (MARGIN*2));
+    now_playing.starty = MARGIN;
+    now_playing.startx = menu.width + search.width + (MARGIN*2);
+
+    now_playing.win = newwin(now_playing.height, now_playing.width, now_playing.starty, now_playing.startx);
+
+    if (!now_playing.win) {
+        return 0;
+    }
+    now_playing.has_focus = false;
+    now_playing.selected_line = 0;
+    box(now_playing.win, 0, 0);
+    wrefresh(now_playing.win);
+
+    section_print(&now_playing);
+    return 1;
+}
+static void now_playing_create_content() {
+    now_playing.content = content_create(1);
+    content_add_line(now_playing.content, "...");
+}
+void now_playing_change_content(char *text) {
+    now_playing.content->text[0] = strdup(text);
+    section_print(&now_playing);
+}
+
