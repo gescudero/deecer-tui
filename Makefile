@@ -1,6 +1,6 @@
 CC = gcc
 CFLAGS = -Wall -g -fsanitize=address 
-LDFLAGS = -lncursesw -ltinfow -lcurl -lcjson -lmpv -lpthread -static-libasan
+LDFLAGS = -lncursesw -ltinfow -lcurl -lcjson -lmpv -lpthread -static-libasan -lssl -lcrypto -L/xtra/code/rust/deezer_decrypt/target/release -ldeezer_crypto -Wl,-rpath,/xtra/code/rust/deezer_decrypt/target/release
 TARGET = deecer-tui
 
 SRC_DIR = src

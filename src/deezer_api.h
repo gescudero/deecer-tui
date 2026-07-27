@@ -76,7 +76,7 @@ int deezer_init(config_t *config);
 
 // utilities
 content_t *deezer_search(const char *query);
-
+int deezer_get_media(track_t *track, char **filename);
 // getters (pide el objeto a la pool, y si no existe
 // lo pedira a la api)
 user_t *deezer_get_user(int id);

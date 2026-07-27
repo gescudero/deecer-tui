@@ -80,39 +80,6 @@ void player_openplaylist(char *url) {
         }
     }
 }
-void player_playfile(char *audio_data, size_t audio_size) {
-    // Comprobaciones del audio recibido
-    if (audio_size < 100) {
-        fprintf(stderr, "Error: Archivo demasiado pequeño");
-        return;
-    }
-    // Creamos archivo temporal (no se porque todavia)
-    char temp_path[] = "/tmp/deezer_audio_XXXXXX.mp3";
-    int fd = mkstemps(temp_path, 4);
-    if (fd == -1) {
-        perror("Error creando archivo temporal");
-        return;
-    }
-    // Escribimos en el archivo temporal
-    ssize_t written = write(fd, audio_data, audio_size);
-    close(fd);
-
-    if (written != (ssize_t)audio_size) {
-        fprintf(stderr, "Error escribiendo archivo temporal\n");
-        unlink(temp_path);
-        return;
-    }
-    // Cargar archivo
-    const char *cmd[] = {"loadfile", temp_path, NULL};
-    check_error(mpv_command(mpv, cmd));
-    fprintf(stderr, "Reproduciendo %s\n", temp_path);
-    while (1) {
-        mpv_event *event = mpv_wait_event(mpv, 10000);
-        if (event->event_id == MPV_EVENT_SHUTDOWN) {
-            break;
-        }
-    }
-}
 void player_stop() {
     const char *cmd[] = {"stop", "", NULL};
     check_error(mpv_command(mpv, cmd));

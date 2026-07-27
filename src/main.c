@@ -4,11 +4,13 @@
 #include "ui.h"
 #include "player.h"
 #include "deezer_api.h"
+#include "utils.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <cjson/cJSON.h>
 #include <pthread.h>
 
+void *thread_player_playfile(char *path);
 void* thread_player_openurl(void *arg); 
 void* thread_player_openplaylist(void *arg); 
 
@@ -98,11 +100,19 @@ int main() {
                         LOG("url de descarga: %s\n", track->media_url);
                     }
                     LOG("Has seleccionado reproducir %s\n", track->title);
+                    LOG("Comenzando descarga...\n");
+                    char *filename = NULL;
+                    if (DC_SUCCESS == deezer_get_media(track, &filename)) {
+                        LOG("Fichero descargado a %s\n", filename);
+                    } else {
+                        LOG("No hemos podido descargar el fichero.\n");
+                    }
+
 
                     // ejecutamos la reproduccion en un thread aparte (parece que funciona!!)    
-                    // if (pthread_create(&player_thread, NULL, thread_player_openurl, (void*)center_content->tracks[selected_line-1]->preview) != 0) {
-                    //     fprintf(stderr, "Error creando el thread\n");
-                    // }
+                    if (pthread_create(&player_thread, NULL, thread_player_openurl, (void*)filename) != 0) {
+                        fprintf(stderr, "Error creando el thread\n");
+                    }
                 }
 
 
@@ -191,6 +201,8 @@ int main() {
 }
 
 //funcion para el thread del player
+
+// reproducir una url o un file mediante un path
 void* thread_player_openurl(void *arg) {
     pthread_detach(pthread_self()); // el thread se limpia
 
@@ -200,6 +212,8 @@ void* thread_player_openurl(void *arg) {
     free(url);
     return NULL;
 }
+// [DEPRECATED]
+// reproduce una lista de urls (sirve para preview)
 void* thread_player_openplaylist(void *arg) {
     pthread_detach(pthread_self()); // el thread se limpia
 

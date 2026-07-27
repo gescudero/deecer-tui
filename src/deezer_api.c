@@ -35,6 +35,18 @@ enum deezer_requests {
     DC_PAGE_PROFILE,
     DC_PAGE_MEDIA_GET_URL,
 };
+
+/* ============================================================================
+ * DECLARACIONES DE LA BIBLIOTECA RUST
+ * ============================================================================ */
+
+// Estas funciones están en la biblioteca Rust
+// La biblioteca se encuentra en: ../rust/deezer_decrypt/target/release/libdeezer_crypto.a
+extern unsigned char* decrypt_audio(const char* track_id, 
+                                    const unsigned char* data, 
+                                    size_t data_len, 
+                                    size_t* out_len);
+extern void free_decrypted(unsigned char* ptr, size_t len);
 /*****************
 *
 * private vars
@@ -60,7 +72,11 @@ static playlist_t **playlists = NULL;
 ******************/
 // Constructores
 static int deezer_create_client(); 
-static int deezer_create_user(); 
+static int deezer_create_user();
+
+// decrypt
+static int deezer_decrypt_file(track_t *track);
+
 // funciones para gestionar la pool y convertir los json
 // track
 static int deezer_get_track_from_json(const cJSON *json_track, track_t **track);
@@ -85,9 +101,11 @@ static int deezer_get_artist_data(artist_t *artist, int id);
 static int deezer_get_album_data(album_t *album, int id);
 static int deezer_get_playlist_data(playlist_t *playlist, int id);
 static int deezer_get_media_url(track_t **track);
+static int deezer_download_media_file(track_t *track, char **path);
 
 // libcurl
 static size_t writecallback(char *contents, size_t size, size_t nmemb, void *userp);
+static size_t writefilecallback(void *ptr, size_t size, size_t nmemb, FILE *stream);
 static int deezer_curl_set_init_options(); 
 static int deezer_curl_set_headers(bool needToken); 
 static int deezer_curl_set_url(enum deezer_requests request); 
@@ -119,11 +137,6 @@ int deezer_init(config_t *config) {
     // inicializamos curl
     curl_global_init(CURL_GLOBAL_ALL);
     client->curl_handle = curl_easy_init();
-    err_code = deezer_curl_set_init_options(); // seteamos opciones comunes
-    if (DC_SUCCESS != err_code) {
-        return err_code;
-    }
-    LOG("Curl inicializado\n");
 
     // inicializamos user
     err_code = deezer_create_user();
@@ -141,6 +154,59 @@ static int deezer_create_client()  {
     }
     return DC_SUCCESS;
 }
+
+static int deezer_decrypt_file(track_t *track) {
+    LOG("Vamos a desencriptar %s\n", track->title);
+
+    char *track_id = NULL;
+    char *sourcefile = NULL;
+    char *destfile = NULL;
+    
+    asprintf(&track_id, "%d", track->id);
+    asprintf(&sourcefile, "/tmp/%s-crypt.mp3", track_id);
+    asprintf(&destfile, "/tmp/%s.mp3", track_id);
+    
+    // Leer el archivo completo a memoria
+    FILE *f = fopen(sourcefile, "rb");
+    fseek(f, 0, SEEK_END);
+    size_t file_size = ftell(f);
+    fseek(f, 0, SEEK_SET);
+
+    unsigned char *encrypted = malloc(file_size);
+    fread(encrypted, 1, file_size, f);
+    fclose(f);
+
+    // Llamar a decrypt_audio
+    size_t out_len;
+    unsigned char *decrypted = decrypt_audio(track_id, encrypted, file_size, &out_len);
+    free(encrypted);
+
+    // Guardar resultado
+    
+    FILE *out = fopen(destfile, "wb");
+    fwrite(decrypted, 1, out_len, out);
+    fclose(out);
+    // borramos el fichero encriptado
+    remove(sourcefile);
+
+    LOG("fichero desencriptado en %s\n", destfile);
+    // decrypted tenemos que liberarlo con la funcion rust
+    // porque un free de C no liberaria el allocation de rust
+    free_decrypted(decrypted, out_len);
+    free(track_id);
+    free(sourcefile);
+    free(destfile);
+    return DC_SUCCESS;
+}
+
+/***
+ * Create the deezer user for connections to deezer api
+ * Gets the api key and stores it.
+ * Sets curl handle and unset after use it 
+ * Create a json object and free after use it 
+ *
+ * @return error code
+ */
 static int deezer_create_user() {
     // reservamos la memoria para la usuaria
     user = calloc(1, sizeof(user_t));
@@ -148,7 +214,11 @@ static int deezer_create_user() {
         return DC_ERROR_INICIALIZATION_FAILED;
     }
     LOG("Memoria reservada para la usuaria con éxito.\n");
-    
+   
+    // init options 
+    if (deezer_curl_set_init_options() != DC_SUCCESS) {
+        return DC_ERROR_CURL_INIT;
+    }
     // construimos la url
     deezer_curl_set_url(DC_GET_TOKEN);
     // añadimos los headers
@@ -157,9 +227,8 @@ static int deezer_create_user() {
     client->curl_res = curl_easy_perform(client->curl_handle);
     LOG("Request ejecutada.\n");
     if (client->curl_res != CURLE_OK) {
-        // algo ha fallado si se quiere comprobar,
-        // el propio objeto tiene acceso a la respuesta
-        // en client->curl_res
+        // reseteamos las opciones de curl antes de retornar
+        curl_easy_reset(client->curl_handle);
         return DC_ERROR_CURL_RESPONSE_ERROR;
     } else {
         // obtenemos la info del contenido obtenido en el anterior request
@@ -222,6 +291,8 @@ static int deezer_create_user() {
     LOG("user name: %s\n", user->name);
     LOG("session id: %s\n", client->session_id);
     LOG("api token: %s\n", client->api_token);
+    // reseteamos las opciones de curl antes de retornar.
+    curl_easy_reset(client->curl_handle);
     return DC_SUCCESS;
 }
 
@@ -295,12 +366,12 @@ static int deezer_add_artist(artist_t *artist) {
  * @return track_t pointer 
  */
 static track_t *deezer_get_track_from_pool(int id) {
-   for (int i=0; i < nb_tracks; i++) {
-       if (id == tracks[i]->id) {
-           return tracks[i];
-       }
-   }
-   return NULL;
+    for (int i=0; i < nb_tracks; i++) {
+        if (id == tracks[i]->id) {
+            return tracks[i];
+        }
+    }
+    return NULL;
 }
 /**
  * Get artist from pool. Can use deezer_artist_exists first
@@ -384,17 +455,18 @@ content_t *deezer_search(const char *query) {
     content_t *resp = content_create(1);
 
     LOG("Vamos a realizar una busqueda. query=%s\n", query);
-
+    // init options 
+    if (deezer_curl_set_init_options() != DC_SUCCESS) {
+        content_add_line(resp, "[!!] Error en init options del handle de curl.\n");
+        return resp;
+    }
     // seteamos los headers 
     deezer_curl_set_headers(true);
     // seteamos la url
     deezer_curl_set_url(DC_PAGE_SEARCH);
     // construimos el json del post
     deezer_curl_set_post_json(DC_PAGE_SEARCH, query);
-    // comprobamos que tengamos el handle
-    if (client->curl_handle == NULL) {
-        LOG("el handle es null\n");
-    }
+   
     // liberamos el contenedor de los datos de la respuesta,
     // asi nos aseguramos que no nos queden restos de alguna
     // request anterior
@@ -408,6 +480,7 @@ content_t *deezer_search(const char *query) {
     if (CURLE_OK != client->curl_res) {
         LOG("No hemos tenido una respues amigable\n");
         content_add_line(resp, "Parece que no hemos tenido una respuesta amigable al buscar.");
+        curl_easy_reset(client->curl_handle);
         return resp;
     }
 
@@ -450,7 +523,20 @@ content_t *deezer_search(const char *query) {
         }
     }
     LOG("devolvemos resp con %zu tracks\n", resp->numlines );
+    curl_easy_reset(client->curl_handle);
     return resp;
+}
+int deezer_get_media(track_t *track, char **filename) {
+    char *encrypted_filename = NULL;
+    // descargamos el fichero cifrado
+    if (DC_SUCCESS != deezer_download_media_file(track, &(*filename))) {
+        return DC_ERROR_CURL_RESPONSE_ERROR;
+    }
+    if (DC_SUCCESS != deezer_decrypt_file(track)) {
+        return DC_ERROR_UNKNOWN;
+    }
+    asprintf(&(*filename), "/tmp/%d.mp3", track->id);
+    return DC_SUCCESS;
 }
 
 // getters (pide el objeto a la pool, y si no existe
@@ -642,14 +728,12 @@ static int deezer_get_media_url(track_t **track) {
     if (*track == NULL) {
         return DC_ERROR_UNKNOWN;
     }
+    if (deezer_curl_set_init_options() != DC_SUCCESS) {
+        return DC_ERROR_CURL_INIT;
+    }
     deezer_curl_set_headers(true);
     deezer_curl_set_url(DC_PAGE_MEDIA_GET_URL);
     deezer_curl_set_post_json(DC_PAGE_MEDIA_GET_URL, (*track)->token);
-    // comprobamos que tengamos el handle
-    if (client->curl_handle == NULL) {
-        LOG("el handle es null\n");
-        return DC_ERROR_CURL_INIT;
-    }
     // liberamos el contenedor de los datos de la respuesta,
     // asi nos aseguramos que no nos queden restos de alguna
     // request anterior
@@ -661,6 +745,7 @@ static int deezer_get_media_url(track_t **track) {
     
     if (CURLE_OK != client->curl_res) {
         LOG("No hemos tenido una respues amigable\n");
+        curl_easy_reset(client->curl_handle);
         return DC_ERROR_CURL_RESPONSE_ERROR;
     }
 
@@ -710,9 +795,37 @@ static int deezer_get_media_url(track_t **track) {
             cJSON_Delete(json);
         }
     }
+    curl_easy_reset(client->curl_handle);
     return DC_SUCCESS;
 }
-
+/****
+ * Downloads media file to a temporary folder
+ * and returns path to file
+ *
+ * @param track_t track for download 
+ * @param char **path: path to file. Caller has to free char*
+ * @return error code
+ */
+static int deezer_download_media_file(track_t *track, char **path) {
+    if (!client->curl_handle) {
+        return DC_ERROR_CURL_INIT;
+    }
+    asprintf(&(*path), "/tmp/%d-crypt.mp3", track->id);
+    FILE *fp = fopen(*path, "wb");
+    curl_easy_setopt(client->curl_handle, CURLOPT_URL, track->media_url);
+    curl_easy_setopt(client->curl_handle, CURLOPT_WRITEFUNCTION, writefilecallback);
+    curl_easy_setopt(client->curl_handle, CURLOPT_WRITEDATA, fp);
+    curl_easy_setopt(client->curl_handle, CURLOPT_USERAGENT, "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36");
+    client->curl_res = curl_easy_perform(client->curl_handle);
+    fclose(fp);
+    curl_easy_reset(client->curl_handle);
+    
+    if (CURLE_OK == client->curl_res) {
+        return DC_SUCCESS;
+    } else {
+        return DC_ERROR_CURL_RESPONSE_ERROR;
+    }
+}
 /****************
  *
  * CURL helpers
@@ -993,5 +1106,9 @@ static size_t writecallback(char *contents, size_t size, size_t nmemb, void *use
     mem->size += realsize;
     mem->memory[mem->size]=0;
     return realsize;
+}
+static size_t writefilecallback(void *ptr, size_t size, size_t nmemb, FILE *stream) {
+    // Escribimos directamente a fichero conforme vamos recibiendo
+    return fwrite(ptr, size, nmemb, stream);
 }
 
