@@ -88,12 +88,22 @@ content_t *deezer_search(const char *query);
  * Se solicita el path hasta el fichero de audio
  * de un track en concreto. La funcion descarga el fichero
  * encriptado, lo desencripta y escribe en filename la ruta
+ * Se comprueba si ya existe en disco, y si es asi se evita
+ * el proceso.
  *
  * @param el struct track con los datos de la cancion que queremos
  * @param un puntero a string donde escribir el nombre de fichero
  * @result error code 
  */
 int deezer_get_media(track_t *track, char **filename);
+
+/**
+ * Se solicita solo el path al fichero de audio
+ * No se descarga, simplemente devuelve el string
+ * Es útil para generar la playlist con la lista de ficheros
+ * sin tener que esperar a que descargue
+ */
+char *deezer_get_filepath(track_t *track);
 
 // getters (pide el objeto a la pool, y si no existe
 // lo pedira a la api)

@@ -108,14 +108,11 @@ int main() {
                         LOG("No hemos podido descargar el fichero.\n");
                     }
 
-
                     // ejecutamos la reproduccion en un thread aparte (parece que funciona!!)    
                     if (pthread_create(&player_thread, NULL, thread_player_openurl, (void*)filename) != 0) {
                         fprintf(stderr, "Error creando el thread\n");
                     }
                 }
-
-
                 break;
             }
             case UI_ACTION_LOAD_PLAYLIST: {
@@ -134,37 +131,36 @@ int main() {
                     // MODO PLAYLIST 
                     //
                     // 
-                    fprintf(stderr, "[main] Vamos a crear el fichero para la playlist\n");
+                    LOG("[main] Vamos a crear el fichero para la playlist\n");
                     // Creamos el fichero.
                     char *playlist_path = strdup("/tmp/playlist-deezer");
                     FILE *fptr;
                     fptr = fopen(playlist_path,"w");
                     if (fptr == NULL) {
-                        fprintf(stderr, "[main] Oh oh, hay problemas con el fichero\n");
+                        LOG("[main] Oh oh, hay problemas con el fichero\n");
                     }
-                    fprintf(stderr, "selected line: %d\n", selected_line);
-                    fprintf(stderr, "primer track: %s\n", center_content->playlists[0]->tracks[0]->title);
+                    LOG("selected line: %d\n", selected_line);
                     // escribimos en cada linea del fichero una url
                     for (int i=0; i < center_content->playlists[selected_line-1]->nb_tracks; i++) {
                         if (deezer_track_is_valid(center_content->playlists[selected_line-1]->tracks[i])) {
-                            // fprintf(fptr, "%s\n", center_content->playlists[selected_line-1]->tracks[i]->preview);
-                            // fprintf(stderr, "%s\n", center_content->playlists[selected_line-1]->tracks[i]->preview);
+                            // Debemos escribir la ruta al fichero de cada tema (aunque no exista todavia)
+                            char *filepath = deezer_get_filepath(center_content->playlists[selected_line - 1]->tracks[i]);
+                            if (filepath) {
+                                fprintf(fptr, "%s\n", filepath);
+                                LOG("Añadido %s a la playlist.\n", filepath);
+                                free(filepath);
+                            }
+                            // voy a forzar a descargar cada fichero de momento es temporal
+                            char *filename = NULL;
+                            deezer_get_media(center_content->playlists[selected_line-1]->tracks[i], &filename);
                         }
                     }
-                    fprintf(stderr, "[main] Fichero creado\n");
-                    // for (int i=0; i < center_content->numlines; i++) {
-                    //     fprintf(fptr, "%s\n", center_content->tracks[i]->preview);
-                    // }
-                    //cerramos el fichero
+                    LOG("[main] Fichero creado\n");
                     fclose(fptr);
-                    // luego le pasamos la ruta a la funcion que lanza el player en un thread separado
                    if (pthread_create(&player_thread, NULL, thread_player_openplaylist, (void*)playlist_path) != 0) {
                             fprintf(stderr, "Error creando el thread\n");
                     }
-
-
                 }
-
                 break;
             }
             case UI_ACTION_PLAY: {
