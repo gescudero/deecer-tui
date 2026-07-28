@@ -210,23 +210,33 @@ int main() {
 
 //funcion para el thread del player
 
-// reproducir una url o un file mediante un path
+/**
+ * Reproducir una url o un file mediante un path
+ * en un thread independiente
+ *
+ * @param: recibe la url o el path en char*
+ */
 void* thread_player_openurl(void *arg) {
     pthread_detach(pthread_self()); // el thread se limpia
 
     char *url = (char*)arg; // casteamos el argumento
-    fprintf(stderr, "[thread_player_openurl] - Pedimos reproducir\n%s\n", url);
+    LOG("[thread_player_openurl] - Pedimos reproducir\n%s\n", url);
     player_openurl(url);
     free(url);
     return NULL;
 }
-// [DEPRECATED]
-// reproduce una lista de urls (sirve para preview)
+/**
+ * Reproduce una lista de urls o de files
+ * Se le pasa el path a un fichero de texto que debe contener 
+ * un path/url en cada linea
+ *
+ * @param path to file
+ */
 void* thread_player_openplaylist(void *arg) {
     pthread_detach(pthread_self()); // el thread se limpia
 
     char *url = (char*)arg; // casteamos el argumento
-    fprintf(stderr, "[thread_player_openurl] - Pedimos reproducir\n%s\n", url);
+    LOG("[thread_player_openurl] - Pedimos reproducir\n%s\n", url);
     player_openplaylist(url);
     free(url);
     return NULL;

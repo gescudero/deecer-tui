@@ -7,6 +7,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+//
+// PUBLIC FUNCTIONS
+//
 content_t* content_create(size_t content_size) {
     content_t *cont = malloc(sizeof(content_t));
     if (cont == NULL) {
@@ -42,6 +45,7 @@ void content_init(content_t *cont, size_t content_size) {
     // se inicializa nuestro contador de contenido.
     cont->numlines = 0;
 }
+
 void content_add_line(content_t *cont, const char *texto){
     // comprobamos si tenemos memoria suficiente y si no 
     // tenemos ampliamos al doble del tamaño actual.
@@ -75,7 +79,8 @@ void content_add_line(content_t *cont, const char *texto){
     // strdup reservará el espacio necesario en nuestro char*
     cont->text[cont->numlines] = strdup(texto);
     cont->numlines++;
-};
+}
+
 void content_add_char(content_t *cont, int line_index, const char c) {
     // Evitamos escribir algunos caracteres no imprimibles
     // evitamos el 7 porque lo necesitamos luego (es backspace)
@@ -138,8 +143,8 @@ void content_add_char(content_t *cont, int line_index, const char c) {
     cont->text[line_index][len+1] = '\0';
     // pasamos a la linea siguiente para estar preparado.
     cont->numlines = line_index + 1;
+}
 
-};
 void content_add_track(content_t *cont, track_t *track) {
     LOG("content_add_track-0\n");
     // guardamos la linea donde queremos insertar el track
@@ -213,8 +218,6 @@ bool content_line_is_playlist(const content_t *cont, int line_index) {
     return true;
 }
 
-// añadimos todo el contenido de addition a la 
-// estructura destino
 void content_add(content_t *dest, const content_t *addition) {
     // copiamos linea a linea
     for (int i= 0; i<addition->numlines; i++) {
@@ -279,3 +282,5 @@ void remove_extension(char *filename) {
         }
     }
 }
+
+

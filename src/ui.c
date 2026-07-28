@@ -22,7 +22,6 @@ static section_t center = {0};
 static section_t playerui = {0};
 static section_t now_playing = {0};
 
-
 /****************
 * 
 * private functions declaration
@@ -87,7 +86,17 @@ static void now_playing_create_content();
 static void section_print(section_t *sec) {
     // borramos el contenido que hubiera en pantalla
     werase(sec->win);
-        // padding del texto
+    
+    // si tenemos el foco, cambiamos el color del borde 
+    if (sec->has_focus) {
+        wattron(sec->win, COLOR_PAIR(1));
+        box(sec->win, 0, 0);
+        wattroff(sec->win, COLOR_PAIR(1));
+    } else {
+        box(sec->win, 0, 0);
+    }
+
+    // padding del texto
     int x = 2;
     int y = 1;
     // contador de lineas (del content_t)
@@ -116,15 +125,13 @@ static void section_print(section_t *sec) {
             ++y;
         }
     }
-    // ponemos el box al final para sobreescribir en caso de que 
-    // el texto haya superado el maximo ancho.
-    // si tenemos el foco, cambiamos el color del borde 
-    if (sec->has_focus) {
-        wattron(sec->win, COLOR_PAIR(1));
+    // En el caso de la ventana de now_playing volvemos a dibujar
+    // el borde para eliminar posibles caracteres que se hayan salido
+    // tambien aprovechamos para cambiar el color.
+    if (strcmp(sec->name, "now_playing") == 0) {
+        wattron(sec->win, COLOR_PAIR(2));
         box(sec->win, 0, 0);
-        wattroff(sec->win, COLOR_PAIR(1));
-    } else {
-        box(sec->win, 0, 0);
+        wattron(sec->win, COLOR_PAIR(2));
     }
 
     // refrescamos la ventana
@@ -277,6 +284,7 @@ static void ui_end_content() {
 static void ui_start_colors() {
     start_color();
     init_pair(1, COLOR_CYAN, COLOR_BLACK);
+    init_pair(2, COLOR_YELLOW, COLOR_BLACK);
 }
 // Full refresh
 static void ui_full_refresh() {

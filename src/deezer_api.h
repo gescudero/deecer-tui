@@ -105,12 +105,36 @@ int deezer_get_media(track_t *track, char **filename);
  */
 char *deezer_get_filepath(track_t *track);
 
-// getters (pide el objeto a la pool, y si no existe
-// lo pedira a la api)
-user_t *deezer_get_user(int id);
+/**
+ * Get track object by id.
+ *
+ * @param id: the track id 
+ * @return the track_t
+ */
 track_t *deezer_get_track(int id);
+
+/**
+ * Get artist object by id.
+ *
+ * @param id: the artist id 
+ * @return the artist_t
+ */
 artist_t *deezer_get_artist(int id);
+
+/**
+ * Get track object by id.
+ *
+ * @param id: the album id 
+ * @return the album_t
+ */
 album_t *deezer_get_album(int id);
+
+/**
+ * Get playlist object by id.
+ *
+ * @param id: the playlist id 
+ * @return the playlist_t
+ */
 playlist_t *deezer_get_playlist(int id);
 
 /**

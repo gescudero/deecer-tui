@@ -8,12 +8,29 @@
 #include <string.h>
 #include <unistd.h>
 
+/**
+ * Reads config file and parse it 
+ * converting text in a list of 
+ * key value pairs and calling config_set_key
+ * for each pair
+ *
+ * @return error code 
+ */
 static int config_read_file(char *path_to_file);
+
+/**
+ * Write each value in each key of the
+ * global config_t object if are valid
+ *
+ * @params key/value pair
+ */
 static void config_set_key(char *key, char *value);
 
 // config global, definicion inicial
 config_t *config = NULL;
 
+
+// PUBLIC FUNCTIONS 
 config_t* config_init() {
     config = calloc(1, sizeof(config_t));
     if (!config) {
@@ -26,12 +43,14 @@ config_t* config_init() {
     return config;
 }
 
-int config_read_file(char *path_to_file) {
+
+// PRIVATE FUNCTIONS
+static int config_read_file(char *path_to_file) {
     FILE *fptr;
     char textline[1024];
     fptr = fopen(path_to_file, "r");
     if (fptr == NULL) {
-        return 1;
+        return DC_ERROR_FILE_ACCESS;
     }
     while (fgets(textline, 1024, fptr)) {
         char key[256] = {0}; // contenedor para la clave
@@ -66,10 +85,10 @@ int config_read_file(char *path_to_file) {
         config_set_key(key, value);
     }
     fclose(fptr);
-    return 0;
+    return DC_SUCCESS;
 }
 
-void config_set_key(char *key, char *value) {
+static void config_set_key(char *key, char *value) {
     LOG("%s - %s\n", key, value);
     if (strcmp(key, "IS_DEBUG") == 0) {
         if (strcmp(value, "true") == 0) {

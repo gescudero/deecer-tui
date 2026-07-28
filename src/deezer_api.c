@@ -414,12 +414,6 @@ char *deezer_get_filepath(track_t *track) {
     return filepath;
 }
 
-// lo pedira a la api)
-user_t *deezer_get_user(int id) {
-    //not IMPLEMENTED
-    user_t *user;
-    return user;
-}
 track_t *deezer_get_track(int id) {
     for (int i=0; i<nb_tracks; i++) {
         if (id == tracks[i]->id) {
@@ -463,8 +457,8 @@ bool deezer_track_is_valid(track_t *track) {
         return false;
     }
     return true;
-    
 }
+
 bool deezer_artist_is_valid(artist_t *artist) {
     // NOT IMPLEMENTED
     return true;

@@ -14,9 +14,15 @@ struct config_t {
     char *download_path;
 };
 
+// global config object
 extern config_t *config;
 
+/**
+ * Initialize config object
+ * allocating memory and reading
+ * config file from disk
+ *
+ * @return: a pointer to the configured config_t object
+ */
 config_t* config_init();
-
-
 #endif
