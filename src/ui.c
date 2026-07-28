@@ -87,15 +87,7 @@ static void now_playing_create_content();
 static void section_print(section_t *sec) {
     // borramos el contenido que hubiera en pantalla
     werase(sec->win);
-    // si tenemos el foco, cambiamos el color del borde 
-    if (sec->has_focus) {
-        wattron(sec->win, COLOR_PAIR(1));
-        box(sec->win, 0, 0);
-        wattroff(sec->win, COLOR_PAIR(1));
-    } else {
-        box(sec->win, 0, 0);
-    }
-    // padding del texto
+        // padding del texto
     int x = 2;
     int y = 1;
     // contador de lineas (del content_t)
@@ -124,6 +116,17 @@ static void section_print(section_t *sec) {
             ++y;
         }
     }
+    // ponemos el box al final para sobreescribir en caso de que 
+    // el texto haya superado el maximo ancho.
+    // si tenemos el foco, cambiamos el color del borde 
+    if (sec->has_focus) {
+        wattron(sec->win, COLOR_PAIR(1));
+        box(sec->win, 0, 0);
+        wattroff(sec->win, COLOR_PAIR(1));
+    } else {
+        box(sec->win, 0, 0);
+    }
+
     // refrescamos la ventana
     wrefresh(sec->win);
 }
