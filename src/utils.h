@@ -33,5 +33,5 @@ bool content_line_is_playlist(const content_t *cont, int line_index);
 void content_add(content_t *dest, const content_t *addition);
 void content_clear(content_t *cont);
 void content_free(content_t *cont);
-void secure_free(void *ptr);
+void remove_extension(char *filename);
 #endif

@@ -5,6 +5,7 @@
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 content_t* content_create(size_t content_size) {
     content_t *cont = malloc(sizeof(content_t));
@@ -268,4 +269,13 @@ void content_free(content_t *cont) {
     }
     content_clear(cont);
     free(cont);
+}
+
+void remove_extension(char *filename) {
+    for (int i=0;i<strlen(filename); i++) {
+        if (filename[i] == '.') {
+            filename[i] = '\0';
+            return;
+        }
+    }
 }

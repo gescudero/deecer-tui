@@ -1,12 +1,22 @@
 #include "player.h"
+#include "deezer_api.h"
+#include "models.h"
+#include "ui.h"
 #include "utils.h"
 #include <sched.h>
 #include <stddef.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <unistd.h>
 #include <mpv/client.h>
+
+
+
 // EL HANDLE
 static mpv_handle *mpv;
+
+
+static void player_notify_now_playing(char *filename); 
 
 // funcion para gestionar errores, esta copiada del 
 // ejemplo simple.c de mpv-player/mpv-examples
@@ -22,6 +32,8 @@ static void player_configure(mpv_handle *handle) {
     mpv_set_option_string(handle, "no-video", "yes");
     mpv_set_option_string(handle, "audio-display", "no");
     mpv_set_option_string(handle, "input-default-bindings", "yes");
+    // nos suscribimos al evento de cambio de media-title (cambio de cancion)
+    mpv_observe_property(mpv, 0, "media-title", MPV_FORMAT_STRING);
 }
 
 // Inicializacion del player, lo conservaremos durante la vida
@@ -70,20 +82,27 @@ void player_openplaylist(char *url) {
     check_error(mpv_command(mpv,cmd));
     LOG("[player] Loadlist command...\n");
     while (1) {
-        mpv_event *event = mpv_wait_event(mpv, 10000);
-        LOG("[playlist] event: %s\n", mpv_event_name(event->event_id));
+        mpv_event *event = mpv_wait_event(mpv, 0);
+        if (event->event_id != MPV_EVENT_NONE) {
+            LOG("[playlist] event: %s\n", mpv_event_name(event->event_id));
+        }
         if (event->event_id == MPV_EVENT_SHUTDOWN) {
             break;
         } else if (event->event_id == MPV_EVENT_END_FILE) {
-            // Salta cada vez que acaba una cancion,
-            // asi que aqui deberiamos avisar de que hemos
-            // cambiado de track
-            // NO ESTOY SEGURO
-            LOG("MPV_EVENT_END_FILE");
-
-            break;
+            LOG("MPV_EVENT_END_FILE\n");
+            //break;
+        } else if (event->event_id == MPV_EVENT_PROPERTY_CHANGE) {
+            LOG("MPV_EVENT_PROPERTY_CHANGE\n");
+            mpv_event_property *prop = (mpv_event_property*)event->data;
+            LOG("prop->name: %s\n", prop->name);
+            LOG("prop->format: %d\n", prop->format);
+            if (strcmp(prop->name, "media-title") == 0 && prop->format == MPV_FORMAT_STRING) {
+                char *title = *(char**)prop->data;
+                player_notify_now_playing(title);
+            }
         }
     }
+    LOG("[playlist] - Hemos salido del bucle de notificaciones ------\n");
 }
 void player_stop() {
     const char *cmd[] = {"stop", "", NULL};
@@ -113,7 +132,7 @@ void player_pause() {
 void player_forward() {
     LOG("[player] Solicitada proxima cancion en la lista\n");
     const char *cmd[] = {"playlist-next", "weak", NULL};
-    check_error(mpv_command(mpv, cmd));
+    mpv_command_async(mpv, 0, cmd);  // asíncrono, no bloquea
 }
 // Previous song on playlist
 void player_back() {
@@ -125,4 +144,17 @@ void player_back() {
 int player_get_time_pos(double *pos) {
     mpv_get_property(mpv, "time-pos", MPV_FORMAT_DOUBLE, pos);
     return 0;
+}
+
+static void player_notify_now_playing(char *filename) {
+    if (filename) {
+        LOG("filename: %s\n", filename);
+        remove_extension(filename);
+        track_t *track = deezer_get_track(atoi(filename));
+        char *real_title = NULL;
+        asprintf(&real_title, "%s (%s)", track->title, track->artist[0]->name);
+        LOG("Nueva canción: %s\n",real_title);
+        now_playing_change_content(real_title);
+        free(real_title);
+    }
 }

@@ -21,9 +21,11 @@ int main() {
     pthread_t player_thread;
 
     // read config
-    config_t *config = config_init(); 
+    config = config_init(); 
 
     LOG("Config cargada. User arl=%s\n", config->arl);
+    LOG("keep_downloads: %d\n", config->keep_downloads);
+    LOG("download_dir: %s\n", config->download_path);
     
     if (deezer_arl_is_valid(config->arl)) {
         // init de la api y libcurl
@@ -193,10 +195,16 @@ int main() {
         }
     }
     // Rutinas de cerrado de la aplicacion 
+    LOG("Vamos cerrando:\n");
     pthread_cancel(player_thread);
+    LOG("hilos,\n");
     player_end();
-    ui_end();
+    LOG("player,\n");
     deezer_cleanup();
+    LOG("deezer,\n");
+    ui_end();
+    LOG("curses, adeu.\n")
+
     return 0;
 }
 

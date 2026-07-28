@@ -405,7 +405,12 @@ int deezer_get_media(track_t *track, char **filename) {
 
 char *deezer_get_filepath(track_t *track) {
     char *filepath = NULL;
-    asprintf(&filepath, "/tmp/%d.mp3", track->id);
+    if (config->keep_downloads) {
+        asprintf(&filepath, "%s/%d.mp3", config->download_path, track->id);
+    } else {
+        asprintf(&filepath, "/tmp/%d.mp3", track->id);
+    }
+    LOG("[deezer_get_filepath] - filepath: %s\n", filepath);
     return filepath;
 }
 
@@ -416,9 +421,12 @@ user_t *deezer_get_user(int id) {
     return user;
 }
 track_t *deezer_get_track(int id) {
-    // NOT IMPLEMENTED
-    track_t *track;
-    return track;
+    for (int i=0; i<nb_tracks; i++) {
+        if (id == tracks[i]->id) {
+            return tracks[i];
+        }
+    }
+    return NULL;
 } 
 artist_t *deezer_get_artist(int id) {
     // NOT IMPLEMENTED
@@ -909,7 +917,7 @@ static int deezer_get_media_url(track_t **track) {
     return DC_SUCCESS;
 }
 static int deezer_download_media_file(track_t *track) {
-    char *path = NULL;
+    char *path = deezer_get_filepath(track);
     if (!client->curl_handle) {
         return DC_ERROR_CURL_INIT;
     }
@@ -935,11 +943,10 @@ static int deezer_decrypt_file(track_t *track) {
 
     char *track_id = NULL;
     char *sourcefile = NULL;
-    char *destfile = NULL;
+    char *destfile = deezer_get_filepath(track);
     
     asprintf(&track_id, "%d", track->id);
     asprintf(&sourcefile, "/tmp/%s-crypt.mp3", track_id);
-    asprintf(&destfile, "/tmp/%s.mp3", track_id);
     
     // Leer el archivo completo a memoria
     FILE *f = fopen(sourcefile, "rb");

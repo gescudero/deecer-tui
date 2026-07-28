@@ -1,19 +1,29 @@
 //config.c 
 #include "config.h"
 #include "models.h"
+#include "utils.h"
 #include <stdbool.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
-static config_t app_config;
 static int config_read_file(char *path_to_file);
 static void config_set_key(char *key, char *value);
 
+// config global, definicion inicial
+config_t *config = NULL;
+
 config_t* config_init() {
-    app_config.is_debug = false;
-    app_config.deezer_active = false;
+    config = calloc(1, sizeof(config_t));
+    if (!config) {
+        return NULL;
+    }
+    config->is_debug = false;
+    config->deezer_active = false;
+    config->keep_downloads = false;
     config_read_file("/home/guille/.deezer/config");
-    return &app_config;
+    return config;
 }
 
 int config_read_file(char *path_to_file) {
@@ -60,15 +70,33 @@ int config_read_file(char *path_to_file) {
 }
 
 void config_set_key(char *key, char *value) {
+    LOG("%s - %s\n", key, value);
     if (strcmp(key, "IS_DEBUG") == 0) {
         if (strcmp(value, "true") == 0) {
-            app_config.is_debug = true;
+            config->is_debug = true;
         } else {
-            app_config.is_debug = false;
+            config->is_debug = false;
         }
-    } else if (strcmp(key, "DEEZER_ARL") == 0) {
-        app_config.arl = strdup(value);
-    } else if (strcmp(key, "THEME") == 0) {
-        app_config.theme = strdup(value);
+    }
+    if (strcmp(key, "DEEZER_ARL") == 0) {
+        config->arl = strdup(value);
+    }
+    if (strcmp(key, "THEME") == 0) {
+        config->theme = strdup(value);
+    }
+    if (strcmp(key, "KEEP_DOWNLOADS") == 0) {
+        if (strcmp(value, "true") == 0) {
+            config->keep_downloads = true;
+        } else {
+            config->keep_downloads = false;
+        }
+    }
+    if (strcmp(key, "DOWNLOAD_PATH") == 0) {
+        if (access(value, F_OK) == 0) {
+            config->download_path = strdup(value);
+        } else {
+            config->download_path = strdup("/tmp");
+            config->keep_downloads = false;
+        }
     }
 }
