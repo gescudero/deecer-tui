@@ -48,6 +48,8 @@ static void section_prev_option(section_t *sec);
 static void section_set_focus(section_t *sec); 
 static void section_unset_focus(section_t *sec); 
 static const char* section_get_selected_value(section_t *sec); 
+static section_t *section_get_focused();
+static int section_exec_action(section_t *sec);
 //menu 
 static int menu_create_window();
 static void menu_create_content();
@@ -227,6 +229,71 @@ static const char* section_get_selected_value(section_t *sec) {
     return sec->content->text[sec->selected_line - 1];
 }
 
+static section_t *section_get_focused() {
+    if (menu.has_focus) {
+        return &menu;
+    }
+    if (user_playlists.has_focus) {
+        return &user_playlists;
+    }
+    if (search.has_focus) {
+        return &search;
+    }
+    if (center.has_focus) {
+        return &center;
+    }
+    if (playerui.has_focus) {
+        return &playerui;
+    }
+    return NULL;
+}
+
+static int section_exec_action(section_t *sec) {
+    if (strcmp(sec->name, "menu") == 0) {
+        // seleccionada opcion
+        // de momento solo imprimimos
+        // la seleccion en la ventana central
+        content_add_line(menu.content, section_get_selected_value(&menu));
+        section_print(&menu);
+        return UI_ACTION_SELECT;
+    }
+    
+    if (strcmp(sec->name, "user_playlists") == 0) {
+        LOG("[ui] Has seleccionado una playlist del usuario.\n");
+        if (content_line_is_playlist(user_playlists.content, user_playlists.selected_line - 1)) {
+            //load playlist tracks on center
+            // get content from playlist id 
+            unsigned long selected_id = user_playlists.content->playlists[user_playlists.selected_line - 1]->id;
+            content_fill_with_playlists(center.content, selected_id);
+            section_print(&center);
+            section_unset_focus(sec);
+            section_set_focus(&center);
+        }
+    }
+    
+    if (strcmp(sec->name, "center") == 0) {
+        // hay que reproducir la seleccion
+        // debemos diferenciar si ha seleccionado un track 
+        // o una playlist
+        //
+        // pasamos playerui el estado para reflejarlo en la ui y preseleccionar el play
+        // pero no cambiamos el foco, simplemente iluminamos el play
+        LOG("[ui] Has seleccionado reproducir.\n");
+        playerui.selected_line = UI_PLAYER_PLAY;
+        section_print(&playerui);
+        if (content_line_is_track(center.content, center.selected_line -1)) {
+            return UI_ACTION_LOAD_TRACK;
+        } else if(content_line_is_playlist(center.content, center.selected_line -1)) {
+            return UI_ACTION_LOAD_PLAYLIST;
+        }
+        return UI_ACTION_NONE;
+    }
+    
+    if (strcmp(sec->name, "playerui") == 0) {
+        return playerui_get_selected_action();
+    }
+    return UI_ACTION_NONE;
+}
 /*************
  *
  *  curses functions definitions
@@ -324,8 +391,11 @@ static void ui_full_refresh() {
 // Comportamiento al pulsar la tecla TAB
 static void ui_change_focus() {
     if (menu.has_focus) {
-        // si teniamos foco en menu, pasamos a search
+        // si teniamos foco en menu, pasamos a user_playlists 
         section_unset_focus(&menu);
+        section_set_focus(&user_playlists);
+    } else if (user_playlists.has_focus) {
+        section_unset_focus(&user_playlists);
         section_set_focus(&search);
     } else if (search.has_focus) {
         // si teniamos foco en search pasamos a center
@@ -374,37 +444,8 @@ ui_action_t ui_handle_input(char *return_value) {
     }
     int pressed_key = 0;
 
-    if (menu.has_focus) {   // Acciones en la ventana de menu
-        pressed_key = section_getch(&menu);
-        switch (pressed_key) {
-            case KEY_UP: // flecha arriba
-                section_prev_option(&menu);
-                break;
-            case KEY_DOWN: // flecha abajo
-                section_next_option(&menu);
-                break;
-            case 9: // TAB
-                ui_change_focus();
-                return UI_ACTION_CHANGE_FOCUS;
-                break;
-            case 10: // ENTER
-                // seleccionada opcion
-                // de momento solo imprimimos
-                // la seleccion en la ventana central
-                content_add_line(center.content, section_get_selected_value(&menu));
-                section_print(&center);
-                return UI_ACTION_SELECT;
-            case 'q':
-            case 'Q':
-                // Salimos
-                ui_end();
-                return UI_ACTION_QUIT;
-            default:
-                return UI_ACTION_NONE;
-        }
-        section_print(&menu);
-        
-    } else if (search.has_focus) { // Acciones en la ventana de busqueda
+    if (search.has_focus) {
+        // Caso mas diferente al resto de secciones
         // Hasta que no pulsen ENTER o TAB, cada tecla la escribimos en el campo
         // de texto. Desde la funcion content_add_char controlamos si le pasamos
         // pulsaciones de teclas no imprimibles o Suprimir/Backspace
@@ -418,7 +459,6 @@ ui_action_t ui_handle_input(char *return_value) {
             // con TAB cambiamos foco
             ui_change_focus();
             return UI_ACTION_CHANGE_FOCUS;
-
         } else if (pressed_key == 10) {
             // con enter cambiamos foco Y devolvemos accion de SEARCH
             ui_change_focus();
@@ -426,76 +466,58 @@ ui_action_t ui_handle_input(char *return_value) {
             return UI_ACTION_SEARCH;
         }
         return UI_ACTION_NONE;
+    }
 
-    } else if (center.has_focus) { // Acciones en la ventana central
-        pressed_key = section_getch(&center);
-        switch (pressed_key) {
-            case KEY_UP:
-                section_prev_option(&center);
-                break;
-            case KEY_DOWN:
-                section_next_option(&center);
-                break;
-            case 9:
-                //TAB
-                ui_change_focus();
-                return UI_ACTION_CHANGE_FOCUS;
-            case 10:
-                //ENTER
-                // hay que reproducir la seleccion
-                // debemos diferenciar si ha seleccionado un track 
-                // o una playlist
-                //
-                // pasamos playerui el estado para reflejarlo en la ui y preseleccionar el play
-                // pero no cambiamos el foco, simplemente iluminamos el play
-                fprintf(stderr, "[ui] Has seleccionado reproducir ");
-                playerui.selected_line = UI_PLAYER_PLAY;
-                section_print(&playerui);
-                if (content_line_is_track(center.content, center.selected_line -1)) {
-                    fprintf(stderr, " un track.\n");
-                    return UI_ACTION_LOAD_TRACK;
-                } else if(content_line_is_playlist(center.content, center.selected_line -1)) {
-                    fprintf(stderr, " una playlist.\n");
-                    return UI_ACTION_LOAD_PLAYLIST;
-                }
-                return UI_ACTION_NONE;
-            case 'q':
-            case 'Q':
-                // Salimos
-                ui_end();
-                return UI_ACTION_QUIT;
-            default:
-                return UI_ACTION_NONE;
-        }
-        section_print(&center);
-        return UI_ACTION_NONE;
-    } else if (playerui.has_focus) {
-        pressed_key = section_getch(&playerui);
-        switch (pressed_key) {
-            case KEY_LEFT:
-                section_prev_option(&playerui);
-                break;
-            case KEY_RIGHT:
-                section_next_option(&playerui);
-                break;
-            case 9:
-                // TAB
-                ui_change_focus();
-                return UI_ACTION_CHANGE_FOCUS;
-            case 10:
-                // ENTER
-                return playerui_get_selected_action();
-                break;
-            case 'q':
-            case 'Q':
-                ui_end();
-                return UI_ACTION_QUIT;
-            default:
-                return UI_ACTION_NONE;
-        }
-        section_print(&playerui);
+    // el resto de secciones se comportan mas o menos igual 
+    section_t *focused_section = section_get_focused();
+
+    pressed_key = section_getch(focused_section);
+    if (!pressed_key) {
         return UI_ACTION_NONE;
     }
+    switch (pressed_key) {
+        case KEY_UP:
+            // en todos los casos menos con el playerui que mueve en 
+            // horizontal <- ->
+            if (strcmp(focused_section->name, "playerui") != 0) {
+                section_prev_option(focused_section);
+            }
+            break;
+        case KEY_DOWN:
+            // en todos los casos menos con el playerui que mueve en 
+            // horizontal <- ->
+            if (strcmp(focused_section->name, "playerui") != 0) {
+                section_next_option(focused_section);
+            }
+            break;
+        case KEY_LEFT:
+            // solo en el caso de player ui 
+            if (strcmp(focused_section->name, "playerui") == 0) {
+                section_prev_option(focused_section);
+            }
+            break;
+        case KEY_RIGHT:
+            // solo en el caso de player ui 
+            if (strcmp(focused_section->name, "playerui") == 0) {
+                section_next_option(focused_section);
+            }
+            break;
+        case 9:
+            ui_change_focus();
+            return UI_ACTION_CHANGE_FOCUS;
+            break;
+        case 10:
+            return section_exec_action(focused_section);
+            break;
+        case 'q':
+        case 'Q':
+            return UI_ACTION_QUIT;
+            break;
+        default:
+            break;
+    }
+    section_print(focused_section);
+
     return UI_ACTION_NONE;
 }
 
@@ -515,7 +537,7 @@ static void menu_create_content() {
     content_add_line(menu.content, "Settings");
 }
 static int menu_create_window() {
-    menu.name = strdup("name");
+    menu.name = strdup("menu");
     menu.height = 6;
     menu.width = 16;
     menu.starty = MARGIN;
@@ -688,11 +710,9 @@ static ui_action_t playerui_get_selected_action() {
     }
 }
 
-/**********
- *
- * now playing section
- *
- *********/
+// ===================
+// now playing section
+// ===================
 static int now_playing_create_window() {
     now_playing.name = strdup("now_playing");
     now_playing.height = 3;
@@ -713,14 +733,17 @@ static int now_playing_create_window() {
     section_print(&now_playing);
     return 1;
 }
+
 static void now_playing_create_content() {
     now_playing.content = content_create(1);
     content_add_line(now_playing.content, "...");
 }
+
 void now_playing_change_content(char *text) {
     now_playing.content->text[0] = strdup(text);
     section_print(&now_playing);
 }
+
 // ======================
 // USER PLAYLISTS SECTION
 // ======================
