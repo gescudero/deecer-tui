@@ -150,9 +150,18 @@ static void player_notify_now_playing(char *filename) {
     if (filename) {
         LOG("filename: %s\n", filename);
         remove_extension(filename);
-        track_t *track = deezer_get_track(atoi(filename));
+        unsigned long track_id = strtoul(filename, NULL, 10);
+        track_t *track = deezer_get_track(track_id);
+        if (!track || !track->title) {
+            LOG("No hemos podido notificar lo que esta sonando.\n");
+            return;
+        }
         char *real_title = NULL;
-        asprintf(&real_title, "%s (%s)", track->title, track->artist[0]->name);
+        if (!track->artist[0] || !track->artist[0]->name) {
+            asprintf(&real_title, "%s (unknown)", track->title);
+        } else {
+            asprintf(&real_title, "%s (%s)", track->title, track->artist[0]->name);
+        }
         LOG("Nueva canción: %s\n",real_title);
         now_playing_change_content(real_title);
         free(real_title);
