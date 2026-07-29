@@ -1,4 +1,6 @@
 #include "ui.h"
+#include "deezer_api.h"
+#include "models.h"
 #include "utils.h"
 #include <locale.h>
 #include <ncursesw/curses.h>
@@ -21,6 +23,7 @@ static section_t search = {0};
 static section_t center = {0};
 static section_t playerui = {0};
 static section_t now_playing = {0};
+static section_t user_playlists = {0};
 
 /****************
 * 
@@ -62,6 +65,10 @@ static ui_action_t playerui_get_selected_action();
 //now playing 
 static int now_playing_create_window();
 static void now_playing_create_content();
+//user_playlists
+static int user_playlists_create_window();
+static void user_playlists_create_content();
+
 /*******************
  *
  * public funcions (declared in ui.h)
@@ -101,6 +108,11 @@ static void section_print(section_t *sec) {
     int y = 1;
     // contador de lineas (del content_t)
     int i = 0;
+    // maximo numero de caracteres
+    // ancho de la seccion menos dos columnas por
+    // los bordes y menos 1 por el indice base 0
+    int max_char = sec->width - 3;
+
     // hemos seleccionado una linea que no cabe, entonces vamos moviendo 
     // la primera linea que imprimimos, de forma que creamos el scroll
     if (strcmp(sec->name, "playerui") != 0 &&sec->selected_line > sec->height -2) {
@@ -110,13 +122,24 @@ static void section_print(section_t *sec) {
     // la linea seleccionada
     for (; i<sec->content->numlines; ++i) {
         if (y < (sec->height - 1)) {
+            // texto que imprimiremos
+            char *printed_text = strdup(sec->content->text[i]);
+            if (strlen(printed_text) > max_char) {
+                printed_text[max_char] = '\0';
+            }
+
             if (sec->selected_line == i+1) {
                 wattron(sec->win, A_REVERSE);
-                mvwprintw(sec->win, y, x, "%s", sec->content->text[i]);
+                // tenemos que cambiar mvwprintw que imprime una linea y si no cabe
+                // pasa a escribir en la siguiente, por ujna funcion que escriba 
+                // solo lo que que quepa en el espacio que tiene
+                mvwprintw(sec->win, y, x, "%s", printed_text);
                 wattroff(sec->win, A_REVERSE);
             } else {
-                mvwprintw(sec->win, y, x, "%s", sec->content->text[i]);
+                mvwprintw(sec->win, y, x, "%s", printed_text);
             }
+            free(printed_text);
+            printed_text = NULL;
         }
        // playerui escribe en horizontal, el resto en vertical
         if (strcmp(sec->name, "playerui") == 0 ) {
@@ -216,6 +239,7 @@ static void ui_init_content() {
     center_create_content();
     playerui_create_content();
     now_playing_create_content();
+    user_playlists_create_content();
 }
 static bool ui_init_windows() {
 // funciones de inicializacion de ncurses
@@ -249,6 +273,9 @@ static bool ui_init_windows() {
         return false;
     }
     if (!now_playing_create_window()) {
+        return false;
+    }
+    if (DC_SUCCESS != user_playlists_create_window()) {
         return false;
     }
 
@@ -492,7 +519,7 @@ static int menu_create_window() {
     menu.height = 6;
     menu.width = 16;
     menu.starty = MARGIN;
-    menu.starty = MARGIN;
+    menu.startx = 0;
     menu.win = newwin(menu.height, menu.width, menu.starty, menu.startx);
 
     if (menu.win == NULL) {
@@ -693,5 +720,38 @@ static void now_playing_create_content() {
 void now_playing_change_content(char *text) {
     now_playing.content->text[0] = strdup(text);
     section_print(&now_playing);
+}
+// ======================
+// USER PLAYLISTS SECTION
+// ======================
+static int user_playlists_create_window() {
+    user_playlists.name = strdup("user_playlists");
+    user_playlists.height = 16;
+    user_playlists.width = 16;
+    user_playlists.starty = menu.height + MARGIN;
+    user_playlists.startx = 0;
+    user_playlists.win = newwin(user_playlists.height, user_playlists.width, user_playlists.starty, user_playlists.startx);
+
+    if (user_playlists.win == NULL) {
+        return DC_ERROR_MEMORY_MAP_FAILED; // devolvemos fallo
+    }
+    box(user_playlists.win, 0, 0);
+    keypad(user_playlists.win, TRUE);
+
+    section_print(&user_playlists);
+    return DC_SUCCESS; // devolvemos OK
+}
+
+void user_playlists_create_content() {
+     // contenido
+    user_playlists.has_focus = false;
+    user_playlists.selected_line = 0; // numero de linea seleccionada
+    user_playlists.content = content_create(user_playlists.height);
+    
+    user_t *user = deezer_get_user();
+
+    for (int i=0; i < user->nb_playlists; i++) {
+        content_add_playlist(user_playlists.content, user->playlists[i]);
+    }
 }
 

@@ -23,14 +23,16 @@ struct deezer_client_t {
 };
 
 struct user_t {
-    int id; //results:USER:USER_ID
+    unsigned long id; //results:USER:USER_ID
     char *name;//results:USER:BLOG_NAME
     char *email;//results:USER:EMAIL
     char *lovedtracks_id;//results:USER:LOVEDTRACKS_ID 
     char *user_token;//results:USER_TOKEN 
+    int nb_playlists;
+    playlist_t **playlists;
 };
 struct track_t {
-    int id; //results:DATA:SNG_ID
+    unsigned long id; //results:DATA:SNG_ID
     char *title; //results:DATA:SNG_TITLE
     char *token; //results:TRACK_TOKEN
     time_t token_expire; //results:TRACK_TOKEN_EXPIRE
@@ -40,13 +42,13 @@ struct track_t {
     char *media_url; // peticion a -> DEEZER_MEDIA_URL
 };
 struct artist_t {
-    int id;
+    unsigned long id;
     char *name;
     track_t **tops;
     album_t **albums;
 };
 struct album_t {
-    int id;
+    unsigned long id;
     char *title;
     artist_t **artists;
     int nb_artists;
@@ -55,10 +57,11 @@ struct album_t {
 
 };
 struct playlist_t {
-    int id;
+    unsigned long id;
     char *title;
     user_t *user;
     int nb_tracks;
+    bool has_tracks;
     track_t **tracks;
 };
 
@@ -105,13 +108,15 @@ int deezer_get_media(track_t *track, char **filename);
  */
 char *deezer_get_filepath(track_t *track);
 
+user_t *deezer_get_user();
+
 /**
  * Get track object by id.
  *
  * @param id: the track id 
  * @return the track_t
  */
-track_t *deezer_get_track(int id);
+track_t *deezer_get_track(unsigned long id);
 
 /**
  * Get artist object by id.
@@ -119,7 +124,7 @@ track_t *deezer_get_track(int id);
  * @param id: the artist id 
  * @return the artist_t
  */
-artist_t *deezer_get_artist(int id);
+artist_t *deezer_get_artist(unsigned long id);
 
 /**
  * Get track object by id.
@@ -127,7 +132,7 @@ artist_t *deezer_get_artist(int id);
  * @param id: the album id 
  * @return the album_t
  */
-album_t *deezer_get_album(int id);
+album_t *deezer_get_album(unsigned long id);
 
 /**
  * Get playlist object by id.
@@ -135,7 +140,7 @@ album_t *deezer_get_album(int id);
  * @param id: the playlist id 
  * @return the playlist_t
  */
-playlist_t *deezer_get_playlist(int id);
+playlist_t *deezer_get_playlist(unsigned long id);
 
 /**
  * Comprueba que el arl pasado por parametro sea un 
