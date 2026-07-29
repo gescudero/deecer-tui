@@ -104,15 +104,19 @@ int main() {
                     LOG("Has seleccionado reproducir %s\n", track->title);
                     LOG("Comenzando descarga...\n");
                     char *filename = NULL;
-                    if (DC_SUCCESS == deezer_get_media(track, &filename)) {
-                        LOG("Fichero descargado a %s\n", filename);
-                    } else {
+                    int err = deezer_get_media(track, &filename);
+                    if (DC_ERROR_CURL_DOWNLOADING == err) {
                         LOG("No hemos podido descargar el fichero.\n");
+                        break;
+                    }
+                    if (DC_ERROR_DECRYPT) {
+                        LOG("Hemos tenido problemas con el desencriptado.\n");
+                        break;
                     }
 
                     // ejecutamos la reproduccion en un thread aparte (parece que funciona!!)    
                     if (pthread_create(&player_thread, NULL, thread_player_openurl, (void*)filename) != 0) {
-                        fprintf(stderr, "Error creando el thread\n");
+                        LOG("Error creando el thread\n");
                     }
                     char *nowplaying_text = NULL;
                     asprintf(&nowplaying_text, "%s - %s", track->artist[0]->name, track->title);

@@ -28,6 +28,7 @@ enum deecer_result {
     DC_ERROR_CJSON_CREATING = -21,
     DC_ERROR_CJSON_NULL = -22,
     DC_ERROR_CJSON_INVALID = -23,
+    DC_ERROR_DECRYPT = -31,
     DC_ERROR_UNKNOWN = -99,
 };
 
