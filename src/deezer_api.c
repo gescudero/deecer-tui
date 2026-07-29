@@ -217,15 +217,26 @@ static int deezer_add_playlist(playlist_t *playlist);
  */
 static bool deezer_playlist_exists(unsigned long id);
 
-
+/**
+ * Add a track to the list of tracks of a playlist
+ */
+static int deezer_playlist_add_track(playlist_t *playlist, track_t *track); 
 
 
 // direct request to api
-static int deezer_get_user_data(user_t *user);
+//
+// NOT NEEDED AT THIS MOMENT
+//static int deezer_get_user_data(user_t *user);
 static int deezer_get_track_data(track_t *track, unsigned long id);
 static int deezer_get_artist_data(artist_t *artist, unsigned long id);
 static int deezer_get_album_data(album_t *album, unsigned long id);
-static int deezer_get_playlist_data(playlist_t *playlist, unsigned long id);
+
+/**
+ * Make request to API to get all the data from a playlist
+ * and write it in the pointer passed as param
+ *
+ */
+static int deezer_get_playlist_data(playlist_t **playlist, unsigned long id);
 
 /**
  * Get url for downloading media
@@ -430,10 +441,10 @@ int deezer_get_media(track_t *track, char **filename) {
     }
     // descargamos el fichero cifrado
     if (DC_SUCCESS != deezer_download_media_file(track)) {
-        return DC_ERROR_CURL_RESPONSE_ERROR;
+        return DC_ERROR_CURL_DOWNLOADING;
     }
     if (DC_SUCCESS != deezer_decrypt_file(track)) {
-        return DC_ERROR_UNKNOWN;
+        return DC_ERROR_DECRYPT;
     }
     return DC_SUCCESS;
 }
@@ -445,7 +456,6 @@ char *deezer_get_filepath(track_t *track) {
     } else {
         asprintf(&filepath, "/tmp/%lu.mp3", track->id);
     }
-    LOG("[deezer_get_filepath] - filepath: %s\n", filepath);
     return filepath;
 }
 user_t *deezer_get_user() {
@@ -461,17 +471,24 @@ track_t *deezer_get_track(unsigned long id) {
 } 
 artist_t *deezer_get_artist(unsigned long id) {
     // NOT IMPLEMENTED
-    artist_t *artist;
-    return artist;
+    return NULL;
 }
 album_t *deezer_get_album(unsigned long id) {
     // NOT IMPLEMENTED
-    album_t *album;
-    return album;
+    return NULL;
 }
 playlist_t *deezer_get_playlist(unsigned long id) {
-    // NOt IMPLEMENTED
-    playlist_t *playlist;
+    playlist_t *playlist = NULL;
+
+    if (deezer_playlist_exists(id)) {
+        playlist = deezer_get_playlist_from_pool(id);
+        if (playlist->has_tracks) {
+            return playlist;
+        }
+    }
+    
+    deezer_get_playlist_data(&playlist, id);
+
     return playlist;
 }
 
@@ -504,7 +521,7 @@ bool deezer_album_is_valid(album_t *album) {
     // NOT IMPLEMENTED
     return false;
 }
-bool deezer_playlist_is_valid(playlist_t *playlist) {
+bool deezer_playlist_is_valid(const playlist_t *playlist) {
     if (!playlist) {
         LOG("playlist null\n");
         return false;
@@ -718,7 +735,7 @@ static int deezer_get_playlists_for_user() {
             }
 
             cJSON *results = cJSON_GetObjectItem(json, "results");
-            char *debug = cJSON_Print(results);
+            //char *debug = cJSON_Print(results);
             //LOG("results: %s", debug);
             cJSON *TAB = cJSON_GetObjectItem(results, "TAB");
             cJSON *playlists = cJSON_GetObjectItem(TAB, "playlists");
@@ -796,7 +813,6 @@ static int deezer_get_track_from_json(const cJSON *json_track, track_t **track) 
         return DC_ERROR_CJSON_INVALID;
     }    
     cJSON *id = cJSON_GetObjectItem(json_track, "SNG_ID");
-    LOG("id: %s\n", cJSON_Print(id));
     
     // una vez que tenemos el id, buscamos si ya tenemos ese track
     // en la pool, si es así, devolvemos el track desde la pool
@@ -808,11 +824,11 @@ static int deezer_get_track_from_json(const cJSON *json_track, track_t **track) 
 
     // si no es asi, lo tenemos que desmembrar y añadir
     cJSON *title = cJSON_GetObjectItem(json_track, "SNG_TITLE");
-    LOG("title: %s\n", cJSON_Print(title));
     cJSON *token = cJSON_GetObjectItem(json_track, "TRACK_TOKEN");
     cJSON *token_expire = cJSON_GetObjectItem(json_track, "TRACK_TOKEN_EXPIRE");
     cJSON *artist = cJSON_GetObjectItem(json_track, "ARTISTS"); // array de artists
-    cJSON *album_id = cJSON_GetObjectItem(json_track, "ALB_ID");
+    // de momento aun no tratamos albumes
+    //cJSON *album_id = cJSON_GetObjectItem(json_track, "ALB_ID");
     
     *track = calloc(1, sizeof(track_t));
     if (*track == NULL) {
@@ -1017,6 +1033,83 @@ static playlist_t *deezer_get_playlist_from_pool(unsigned long id) {
     return NULL;
 }
 
+static int deezer_get_playlist_data(playlist_t **playlist, unsigned long id) {
+    // liberamos si el puntero que nos pasan no es NULL
+    if (*playlist) {
+        deezer_free_playlist(*playlist);
+    }
+    *playlist = calloc(1, sizeof(playlist_t));
+    
+    // preparamos la request
+    if (deezer_curl_set_init_options() != DC_SUCCESS) {
+        return DC_ERROR_CURL_INIT;
+    }
+    deezer_curl_set_headers(true);
+    deezer_curl_set_url(DC_PAGE_PLAYLISTS);
+    char *id_str;
+    asprintf(&id_str, "%lu", id);
+    deezer_curl_set_post_json(DC_PAGE_PLAYLISTS, id_str);
+    // liberamos el contenedor de los datos de la respuesta,
+    // asi nos aseguramos que no nos queden restos de alguna
+    // request anterior
+    free(client->mem.memory);
+    client->mem.memory = NULL;
+    client->mem.size = 0;
+    // realizamos la request y guardamos el codigo de error
+    client->curl_res = curl_easy_perform(client->curl_handle);
+   
+    if (CURLE_OK != client->curl_res) {
+        LOG("No hemos tenido una respues amigable\n");
+        curl_easy_reset(client->curl_handle);
+        return DC_ERROR_CURL_RESPONSE_ERROR;
+    }
+    LOG("La request de playlist ha ido bien\n");
+    char *contenttype = NULL;
+    client->curl_res = curl_easy_getinfo(client->curl_handle, CURLINFO_CONTENT_TYPE, &contenttype);
+
+    if ((CURLE_OK == client->curl_res) && contenttype) {
+        if (strstr(contenttype, "application/json")) {
+           
+            cJSON *json = cJSON_Parse(client->mem.memory);
+            // comprobamos que sea un json valido
+            if (!json || cJSON_IsInvalid(json) || !cJSON_IsObject(json)) {
+                cJSON_Delete(json);
+                return DC_ERROR_CJSON_INVALID;
+            }
+
+            cJSON *results = cJSON_GetObjectItem(json, "results");
+
+            cJSON *DATA = cJSON_GetObjectItem(results, "DATA");
+            cJSON *PLAYLIST_ID = cJSON_GetObjectItem(DATA, "PLAYLIST_ID");
+            cJSON *TITLE = cJSON_GetObjectItem(DATA, "TITLE");
+            
+            (*playlist)->id = strtoul(PLAYLIST_ID->valuestring, NULL, 10);
+            (*playlist)->title = strdup(TITLE->valuestring);
+
+            cJSON *SONGS = cJSON_GetObjectItem(results, "SONGS");
+            cJSON *data = cJSON_GetObjectItem(SONGS, "data");
+
+            if (!cJSON_IsArray(data)) {
+                cJSON_Delete(json);
+                LOG("No tenemos un json valido de tracks en la playlist.\n");
+                return DC_ERROR_CJSON_INVALID;
+            }
+
+            int pl_nb_songs = 0;
+            cJSON *iterator = NULL;
+            cJSON_ArrayForEach(iterator, data) {
+                track_t *track = NULL;
+                deezer_get_track_from_json(iterator, &track);
+                deezer_playlist_add_track(*playlist, track);
+                pl_nb_songs++;
+            }
+            (*playlist)->nb_tracks = pl_nb_songs;
+        }
+    }
+    free(id_str);
+    return DC_SUCCESS;
+}
+
 static int deezer_add_playlist(playlist_t *playlist) {
     if (!playlist || !deezer_playlist_is_valid(playlist)) {
         LOG("No se ha podido añadir una playlists a la pool.\n");
@@ -1049,6 +1142,27 @@ static bool deezer_playlist_exists(unsigned long id) {
     }
     return false;
 }
+
+static int deezer_playlist_add_track(playlist_t *playlist, track_t *track) {
+    if (!playlist || !track) {
+        return DC_ERROR_UNKNOWN;
+    }
+    track_t **tmp = realloc(playlist->tracks, (playlist->nb_tracks + 1) * sizeof(track_t*));
+
+    if (!tmp) {
+        return DC_ERROR_MEMORY_MAP_FAILED;
+    }
+    playlist->tracks = tmp;
+
+    if (!playlist->tracks) {
+        return DC_ERROR_MEMORY_MAP_FAILED;
+    }
+
+    playlist->tracks[playlist->nb_tracks] = track;
+    playlist->nb_tracks++;
+    return DC_SUCCESS;
+}
+
 // ===============
 // MEDIA FUNCTIONS
 // ===============
@@ -1311,6 +1425,7 @@ static int deezer_curl_set_post_json(enum deezer_requests request, const char *p
             // }
             break;
         case DC_PAGE_PLAYLISTS:
+            {
             // {
             //   "playlist_id": "14303680621",
             //   "lang": "en",
@@ -1318,7 +1433,26 @@ static int deezer_curl_set_post_json(enum deezer_requests request, const char *p
             //   "start": 0,
             //   "nb": 500
             // }
+            cJSON *playlist_id = cJSON_CreateString(param);
+            cJSON *lang = cJSON_CreateString("en");
+            cJSON *header = cJSON_CreateBool(true);
+            cJSON *start = cJSON_CreateNumber(0);
+            cJSON *nb = cJSON_CreateNumber(500);
+
+            if (!playlist_id || !lang || !header || !start || !nb) {
+                cJSON_Delete(json);
+                return DC_ERROR_CJSON_CREATING;
+            }
+            cJSON_AddItemToObject(json, "playlist_id", playlist_id);
+            cJSON_AddItemToObject(json, "lang", lang);
+            cJSON_AddItemToObject(json, "header", header);
+            cJSON_AddItemToObject(json, "start", start);
+            cJSON_AddItemToObject(json, "nb", nb);
+
+            post_data = cJSON_PrintUnformatted(json);
+            LOG("=== DC_PAGE_PLAYLISTS === post_data\%s\n", post_data);
             break;
+            }
         case DC_PAGE_TRACK:
             // {
             //   "sng_id": "3135556"

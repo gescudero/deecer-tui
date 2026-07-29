@@ -108,6 +108,9 @@ int deezer_get_media(track_t *track, char **filename);
  */
 char *deezer_get_filepath(track_t *track);
 
+/**
+ * Devuelve un puntero al objeto user actual
+ */
 user_t *deezer_get_user();
 
 /**
@@ -185,7 +188,7 @@ bool deezer_album_is_valid(album_t *album);
  * @param la playlist a comprobar 
  * @return bool 
  */
-bool deezer_playlist_is_valid(playlist_t *playlist);
+bool deezer_playlist_is_valid(const playlist_t *playlist);
 
 /**
  * Funcion de limpieza del cliente de deezer
