@@ -106,6 +106,12 @@ bool content_line_is_playlist(const content_t *cont, int line_index);
 void content_add(content_t *dest, const content_t *addition);
 
 /**
+ * Clear a content and fills with the tracks of a playlist_t
+ *
+*/ 
+void content_fill_with_playlists(content_t *dest, unsigned long playlist_id);
+
+/**
  * Clear content of a content_t and frees memory of it contents 
  * but not the object it self. Can be used to clean its content and
  * reset content_t. After clear you have to call content_init() again

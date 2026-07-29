@@ -146,23 +146,19 @@ void content_add_char(content_t *cont, int line_index, const char c) {
 }
 
 void content_add_track(content_t *cont, track_t *track) {
-    LOG("content_add_track-0\n");
     // guardamos la linea donde queremos insertar el track
     int index = cont->numlines;
     // Solo añadimos contenido si nos han pasado un track valido
     if (deezer_track_is_valid(track)) {
-        LOG("content_add_track-1\n");
         char *tmp_text;
         if (0 < track->nb_artists) {
             asprintf(&tmp_text, "%s (%s)", track->title, track->artist[0]->name);
         } else {
             asprintf(&tmp_text, "%s", track->title);
         }
-        LOG("content_add_track-2\n");
         content_add_line(cont, tmp_text);
         cont->tracks[index] = track;
         free(tmp_text);
-        LOG("content_add_track-3\n");
    }
 }
 int content_add_playlist(content_t *cont, playlist_t *playlist) {
@@ -226,6 +222,24 @@ void content_add(content_t *dest, const content_t *addition) {
         } else {
             content_add_line(dest, addition->text[i]);
         }
+    }
+}
+void content_fill_with_playlists(content_t *dest, unsigned long playlist_id) {
+    playlist_t *playlist = deezer_get_playlist(playlist_id);
+
+    if (!deezer_playlist_is_valid(playlist) || playlist->nb_tracks < 1) {
+        return;
+    }
+    content_clear(dest);
+    content_init(dest, playlist->nb_tracks);
+    
+    // Añadimos el boton de [Play Playlist]
+    content_add_line(dest, "[ Play Playlist ]");
+    content_add_playlist_in_row(dest, playlist, 0);
+
+    // Añadimos los tracks
+    for (int i=1; i<playlist->nb_tracks; i++) {
+        content_add_track(dest, playlist->tracks[i]);
     }
 }
 
