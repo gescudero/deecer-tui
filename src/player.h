@@ -3,6 +3,7 @@
 
 #include <stdbool.h>
 
+extern int player_running;
 bool player_init();
 void player_end();
 void player_openurl(char *url);

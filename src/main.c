@@ -18,7 +18,7 @@ int main() {
     bool running = true;
     ui_action_t action;
     char ui_response[256];
-    pthread_t player_thread;
+    pthread_t player_thread = 0;
 
     // read config
     config = config_init(); 
@@ -29,11 +29,12 @@ int main() {
     
     if (deezer_arl_is_valid(config->arl)) {
         // init de la api y libcurl
-        if (deezer_init(config) == DC_SUCCESS) {
+        int err = deezer_init(config);
+        if (err == DC_SUCCESS) {
             config->deezer_active = true;
             LOG("Api inicializada.\n");
         } else {
-            LOG("Ha ocurrido un error iniciando la api de deezer.\n");
+            LOG("Ha ocurrido un error iniciando la api de deezer. ERROR CODE: %d\n", err);
         }
     } else {
         LOG("No existe una clave ARL válida.\n");
@@ -109,11 +110,17 @@ int main() {
                         LOG("No hemos podido descargar el fichero.\n");
                         break;
                     }
-                    if (DC_ERROR_DECRYPT) {
+                    if (DC_ERROR_DECRYPT == err) {
                         LOG("Hemos tenido problemas con el desencriptado.\n");
                         break;
                     }
 
+                    if (player_thread != 0) {
+                        pthread_cancel(player_thread);
+                        pthread_join(player_thread, NULL);
+                        player_thread = 0;
+                    }
+                    
                     // ejecutamos la reproduccion en un thread aparte (parece que funciona!!)    
                     if (pthread_create(&player_thread, NULL, thread_player_openurl, (void*)filename) != 0) {
                         LOG("Error creando el thread\n");
@@ -167,6 +174,13 @@ int main() {
                     }
                     LOG("[main] Fichero creado\n");
                     fclose(fptr);
+     
+                    if (player_thread != 0) {
+                        pthread_cancel(player_thread);
+                        pthread_join(player_thread, NULL);
+                        player_thread = 0;
+                    }
+
                    if (pthread_create(&player_thread, NULL, thread_player_openplaylist, (void*)playlist_path) != 0) {
                             fprintf(stderr, "Error creando el thread\n");
                     }
@@ -200,10 +214,18 @@ int main() {
     }
     // Rutinas de cerrado de la aplicacion 
     LOG("Vamos cerrando:\n");
-    pthread_cancel(player_thread);
+    //primero le decimos a mpv que vaya saliendo de su bucle
+    //seteando la variable global player_running a 0,
+    //esperamos a que el hilo se acabe y lo seteamos a 0
+    if (player_thread != 0) {
+        player_running = 0;
+        pthread_join(player_thread, NULL);
+        player_thread = 0;
+    }
     LOG("hilos,\n");
+    // con los hilos ya en su sitio, podemos cerrar el player
     player_end();
-    LOG("player,\n");
+    LOG("player_end(),\n");
     deezer_cleanup();
     LOG("deezer,\n");
     ui_end();
@@ -221,8 +243,6 @@ int main() {
  * @param: recibe la url o el path en char*
  */
 void* thread_player_openurl(void *arg) {
-    pthread_detach(pthread_self()); // el thread se limpia
-
     char *url = (char*)arg; // casteamos el argumento
     LOG("[thread_player_openurl] - Pedimos reproducir\n%s\n", url);
     player_openurl(url);
@@ -237,8 +257,6 @@ void* thread_player_openurl(void *arg) {
  * @param path to file
  */
 void* thread_player_openplaylist(void *arg) {
-    pthread_detach(pthread_self()); // el thread se limpia
-
     char *url = (char*)arg; // casteamos el argumento
     LOG("[thread_player_openurl] - Pedimos reproducir\n%s\n", url);
     player_openplaylist(url);

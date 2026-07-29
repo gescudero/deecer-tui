@@ -14,6 +14,7 @@
 
 // EL HANDLE
 static mpv_handle *mpv;
+int player_running = 0;
 
 
 static void player_notify_now_playing(char *filename); 
@@ -61,14 +62,16 @@ bool player_init() {
 void player_end() {
     mpv_terminate_destroy(mpv);
 }
+
 // esta funcion es capaz de reproducir una url si no esta encriptada
 void player_openurl(char *url){
     player_stop();
     const char *cmd[] = {"loadfile", url, NULL};
     check_error(mpv_command(mpv, cmd));
     LOG("[player] Loadfile command...\n");
-    while (1) {
-        mpv_event *event = mpv_wait_event(mpv, 10000);
+    player_running = 1;
+    while (player_running) {
+        mpv_event *event = mpv_wait_event(mpv, 100);
         LOG("event: %s\n", mpv_event_name(event->event_id));
         if (event->event_id == MPV_EVENT_SHUTDOWN) {
             break;
@@ -81,8 +84,9 @@ void player_openplaylist(char *url) {
     const char *cmd[] = {"loadlist", url, NULL};
     check_error(mpv_command(mpv,cmd));
     LOG("[player] Loadlist command...\n");
-    while (1) {
-        mpv_event *event = mpv_wait_event(mpv, 0);
+    player_running = 1;
+    while (player_running) {
+        mpv_event *event = mpv_wait_event(mpv, 100);
         if (event->event_id != MPV_EVENT_NONE) {
             LOG("[playlist] event: %s\n", mpv_event_name(event->event_id));
         }

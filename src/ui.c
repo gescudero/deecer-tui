@@ -361,6 +361,7 @@ void ui_end() {
 // Liberamos ventanas
 static void ui_end_windows() {
     section_delwin(&menu);
+    section_delwin(&user_playlists);
     section_delwin(&search);
     section_delwin(&center);
     section_delwin(&playerui);
@@ -370,6 +371,7 @@ static void ui_end_windows() {
 // Liberamos contenido
 static void ui_end_content() {
     content_free(menu.content);
+    content_free(user_playlists.content);
     content_free(search.content);
     content_free(center.content);
     content_free(playerui.content);
