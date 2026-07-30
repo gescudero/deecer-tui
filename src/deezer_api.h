@@ -1,7 +1,8 @@
-//deezer_api.h
+// deezer_api.h
 
 #ifndef DEEZER_API_H
 #define DEEZER_API_H
+
 #include "models.h"
 #include <stdbool.h>
 #include <time.h>

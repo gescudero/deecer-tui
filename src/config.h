@@ -1,4 +1,5 @@
 // config.h
+
 #ifndef CONFIG_H
 #define CONFIG_H
 
@@ -25,4 +26,5 @@ extern config_t *config;
  * @return: a pointer to the configured config_t object
  */
 config_t* config_init();
+
 #endif

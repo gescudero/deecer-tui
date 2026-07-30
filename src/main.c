@@ -1,5 +1,7 @@
 // main.c
+
 #include "config.h"
+#include "content.h"
 #include "models.h"
 #include "ui.h"
 #include "player.h"

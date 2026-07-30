@@ -1,10 +1,12 @@
 // models.h
+
 #ifndef MODELS_H
 #define MODELS_H
 
 typedef struct config_t config_t;
 typedef struct memory_t memory_t;
 typedef struct content_t content_t;
+typedef struct section_t section_t;
 typedef struct deezer_client_t deezer_client_t;
 typedef struct user_t user_t;
 typedef struct track_t track_t;

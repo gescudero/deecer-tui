@@ -1,13 +1,14 @@
 //ui.h
+
 #ifndef UI_H
 #define UI_H
 
-#include "utils.h"
+#include "models.h"
 #include <ncursesw/curses.h>
 
 #define MARGIN 1 //Valor margenes entre ventanas y con el borde de la ventana
 
-typedef struct {
+struct section_t {
     char* name; // nombre identificativo
     WINDOW *win; // la ventana
     int height; // numero de filas 
@@ -17,7 +18,7 @@ typedef struct {
     bool has_focus; // si tiene el foco actualmente
     content_t *content; // el contenido
     int selected_line; // la linea seleccionada actualmente
-}section_t;
+};
 
 typedef enum {
     UI_ACTION_NONE,

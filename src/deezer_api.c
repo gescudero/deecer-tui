@@ -3,6 +3,7 @@
 #include "deezer_api.h"
 #include "models.h"
 #include "config.h"
+#include "content.h"
 #include "utils.h"
 #include <stdlib.h>
 #include <stdbool.h>
@@ -1716,39 +1717,25 @@ static void deezer_free_user(user_t *user) {
     free(user->email);
     free(user->lovedtracks_id); 
     free(user->user_token);
-    //free(user->playlists);
     free(user);
 }
 static void deezer_free_track(track_t *track) {
     free(track->title);
     free(track->token);
-    //free(track->artists);
     free(track->media_url);
     free(track);
 }
 static void deezer_free_artist(artist_t *artist) {
     free(artist->name);
     free(artist->tops);
-    //free(artist->albums);
     free(artist);
 }
 static void deezer_free_album(album_t *album) {
     free(album->title);
-    //free(album->artists);
-    //free(album->tracks);
     free(album);
 }
 static void deezer_free_playlist(playlist_t *playlist) {
-    // if (!playlist) {
-        // return;
-    // }
-    // if (playlist->title) {
-        free(playlist->title);
-        // playlist->title = NULL;
-    // }
-    // if (playlist->tracks) {
-        free(playlist->tracks);
-        // playlist->tracks = NULL;
-    // }
+    free(playlist->title);
+    free(playlist->tracks);
     free(playlist);
 }

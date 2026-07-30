@@ -1,4 +1,5 @@
 #include "ui.h"
+#include "content.h"
 #include "deezer_api.h"
 #include "models.h"
 #include "utils.h"
