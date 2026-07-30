@@ -11,36 +11,33 @@
 #include <unistd.h>
 #include <mpv/client.h>
 
-
-
 // EL HANDLE
 static mpv_handle *mpv;
 int player_running = 0;
 
-
+/**
+ * Notifica a la ui la cancion que esta sonando actualmente
+ * Le envia un string en formato track_name (artist_name)
+ *
+ */
 static void player_notify_now_playing(char *filename); 
 
-// funcion para gestionar errores, esta copiada del 
-// ejemplo simple.c de mpv-player/mpv-examples
-// debo ajustarla a mis necesidades
-static inline void check_error(int status) {
-    LOG("check_error: %d\n", status);
-    if (status < 0) {
-        LOG("mpv API error: %s\n", mpv_error_string(status));
-    }
-}
-static void player_configure(mpv_handle *handle) {
-    mpv_set_option_string(handle, "terminal", "no");
-    mpv_set_option_string(handle, "msg-level", "all=error");
-    mpv_set_option_string(handle, "no-video", "yes");
-    mpv_set_option_string(handle, "audio-display", "no");
-    mpv_set_option_string(handle, "input-default-bindings", "yes");
-    // nos suscribimos al evento de cambio de media-title (cambio de cancion)
-    mpv_observe_property(mpv, 0, "media-title", MPV_FORMAT_STRING);
-}
+/**
+ * funcion para gestionar errores, esta copiada del 
+ * ejemplo simple.c de mpv-player/mpv-examples
+ * debo ajustarla a mis necesidades
+ */
+static inline void check_error(int status);
 
-// Inicializacion del player, lo conservaremos durante la vida
-// del programa
+/**
+ * configura el handle de mpv con los settings que necesitamos
+ * para la app
+ */
+static void player_configure(mpv_handle *handle); 
+
+// ================
+// PUBLIC FUNCTIONS
+// ================
 bool player_init() {
     mpv = mpv_create();
     if (!mpv) {
@@ -60,12 +57,11 @@ bool player_init() {
     }
     return true;
 }
-// video killed the radio star
+
 void player_end() {
     mpv_terminate_destroy(mpv);
 }
 
-// esta funcion es capaz de reproducir una url si no esta encriptada
 void player_openurl(char *url){
     const char *cmd[] = {"loadfile", url, NULL};
     LOG("antes de mpv_command...\n");
@@ -82,9 +78,9 @@ void player_openurl(char *url){
     }
     player_running = 0;
 }
-// igual que la funcion anterior pero que recibe una lista
-void player_openplaylist(char *url) {
-    const char *cmd[] = {"loadlist", url, NULL};
+
+void player_openplaylist(char *file_path) {
+    const char *cmd[] = {"loadlist", file_path, NULL};
     check_error(mpv_command(mpv,cmd));
     LOG("[player] Loadlist command...\n");
     player_running = 1;
@@ -96,9 +92,6 @@ void player_openplaylist(char *url) {
         if (event->event_id == MPV_EVENT_SHUTDOWN) {
             player_running = 0;
             break;
-        } else if (event->event_id == MPV_EVENT_END_FILE) {
-            LOG("MPV_EVENT_END_FILE\n");
-            //break;
         } else if (event->event_id == MPV_EVENT_PROPERTY_CHANGE) {
             LOG("MPV_EVENT_PROPERTY_CHANGE\n");
             mpv_event_property *prop = (mpv_event_property*)event->data;
@@ -113,13 +106,7 @@ void player_openplaylist(char *url) {
     player_running = 0;
     LOG("[playlist] - Hemos salido del bucle de notificaciones ------\n");
 }
-void player_stop() {
-    player_running = 0;
-    const char *cmd[] = {"stop", "", NULL};
-    check_error(mpv_command(mpv, cmd));
-    LOG("[player] Comando stop\n");
-}
-// Resume play 
+
 void player_play() {
     // Reading a flag property
     int pausa;
@@ -131,29 +118,52 @@ void player_play() {
     }
 }
 
-// Pause play
+void player_stop() {
+    player_running = 0;
+    const char *cmd[] = {"stop", "", NULL};
+    check_error(mpv_command(mpv, cmd));
+    LOG("[player] Comando stop\n");
+}
+
 void player_pause() {
     // Set a property to a string value
     int pausa = 1;
     check_error(mpv_set_property(mpv, "pause", MPV_FORMAT_FLAG, &pausa));
     LOG("[player] Pause set property. \n");
 }
-// Next song on playlist
+
 void player_forward() {
     LOG("[player] Solicitada proxima cancion en la lista\n");
     const char *cmd[] = {"playlist-next", "weak", NULL};
     mpv_command_async(mpv, 0, cmd);  // asíncrono, no bloquea
 }
-// Previous song on playlist
+
 void player_back() {
     LOG("[player] Solicitada anterior cancion en la lista\n");
     const char *cmd[] = {"playlist-prev", "weak", NULL};
     check_error(mpv_command(mpv, cmd));
 }
-// option 
-int player_get_time_pos(double *pos) {
-    mpv_get_property(mpv, "time-pos", MPV_FORMAT_DOUBLE, pos);
-    return 0;
+
+
+// =================
+// PRIVATE FUNCTIONS
+// =================
+
+static inline void check_error(int status) {
+    LOG("check_error: %d\n", status);
+    if (status < 0) {
+        LOG("mpv API error: %s\n", mpv_error_string(status));
+    }
+}
+
+static void player_configure(mpv_handle *handle) {
+    mpv_set_option_string(handle, "terminal", "no");
+    mpv_set_option_string(handle, "msg-level", "all=error");
+    mpv_set_option_string(handle, "no-video", "yes");
+    mpv_set_option_string(handle, "audio-display", "no");
+    mpv_set_option_string(handle, "input-default-bindings", "yes");
+    // nos suscribimos al evento de cambio de media-title (cambio de cancion)
+    mpv_observe_property(mpv, 0, "media-title", MPV_FORMAT_STRING);
 }
 
 static void player_notify_now_playing(char *filename) {

@@ -12,10 +12,27 @@
 #include <cjson/cJSON.h>
 #include <pthread.h>
 
-void *thread_player_playfile(char *path);
+
+/**
+ * Reproducir una url o un file mediante un path
+ * en un thread independiente
+ *
+ * @param: recibe la url o el path en char*
+ */
 void* thread_player_openurl(void *arg); 
+
+/**
+ * Reproduce una lista de urls o de files
+ * Se le pasa el path a un fichero de texto que debe contener 
+ * un path/url en cada linea
+ *
+ * @param path to file
+ */
 void* thread_player_openplaylist(void *arg); 
 
+/**
+ * MAIN FUNCTION
+ */
 int main() {
     bool running = true;
     ui_action_t action;
@@ -234,14 +251,6 @@ int main() {
     return 0;
 }
 
-//funcion para el thread del player
-
-/**
- * Reproducir una url o un file mediante un path
- * en un thread independiente
- *
- * @param: recibe la url o el path en char*
- */
 void* thread_player_openurl(void *arg) {
     char *url = (char*)arg; // casteamos el argumento
     LOG("[thread_player_openurl] - Pedimos reproducir\n%s\n", url);
@@ -249,13 +258,6 @@ void* thread_player_openurl(void *arg) {
     free(url);
     return NULL;
 }
-/**
- * Reproduce una lista de urls o de files
- * Se le pasa el path a un fichero de texto que debe contener 
- * un path/url en cada linea
- *
- * @param path to file
- */
 void* thread_player_openplaylist(void *arg) {
     char *url = (char*)arg; // casteamos el argumento
     LOG("[thread_player_openurl] - Pedimos reproducir\n%s\n", url);

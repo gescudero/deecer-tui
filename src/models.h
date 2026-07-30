@@ -15,7 +15,7 @@ typedef struct artist_t artist_t;
 typedef struct playlist_t playlist_t;
 
 // valores de resultados, inspirado en VkResult de VULKAN
-enum deecer_result {
+typedef enum {
     DC_SUCCESS = 0,
     DC_NOT_READY = 1,
     DC_TIMEOUT = 2,
@@ -32,7 +32,8 @@ enum deecer_result {
     DC_ERROR_CJSON_NULL = -22,
     DC_ERROR_CJSON_INVALID = -23,
     DC_ERROR_DECRYPT = -31,
+    DC_ERROR_UI_INIT = -41,
     DC_ERROR_UNKNOWN = -99,
-};
+} deecer_result_t;
 
 #endif
