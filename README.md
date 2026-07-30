@@ -1,7 +1,8 @@
 # deecer-tui [WORK IN PROGRESS]
 Un cliente de consola para deezer, escrito en C y usando ncurses, libcurl, cjson y libmpv.
 
-<img width="800" alt="imagen" src="https://github.com/user-attachments/assets/fa42de37-d6f6-4b3c-b552-9e99ecda3b9a" />
+<img width="800" alt="imagen" src="https://github.com/user-attachments/assets/ad738570-d67e-41ed-a33a-44c458a63986" />
+
 
 
 ## Introducción
@@ -14,7 +15,7 @@ Una de las cosas que puede que te llamen la atención es que este repo esté doc
 - [x] Poder reproducir las canciones completas
 - [x] Reproducir una lista de tracks continua
 - [x] Reproducir los tracks del resultado de la busqueda como una playlist
-- [ ] Mostrar listas de reproduccion del usuario
+- [x] Mostrar y reproducir listas de reproduccion del usuario
 - [ ] Completar funciones del menu (Home/Explore/Library/Settings)
 
 ## Notas
