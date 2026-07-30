@@ -706,7 +706,15 @@ static int deezer_create_playlist(track_t **tracklist, int nb_tracks, playlist_t
 static int deezer_get_track_from_json(const cJSON *json_track, track_t **track) {
     if (!cJSON_IsObject(json_track)) {
         return DC_ERROR_CJSON_INVALID;
-    }    
+    }
+    
+    // Si existe el objeto FALLBACK dentro del json, usamos FALLBACK,
+    // ya que contiene los datos correctos de descarga del media.
+    cJSON *FALLBACK = cJSON_GetObjectItem(json_track, "FALLBACK");
+    if (FALLBACK && !cJSON_IsInvalid(FALLBACK) && cJSON_IsObject(FALLBACK)) {
+        json_track = FALLBACK;
+    }
+
     cJSON *id = cJSON_GetObjectItem(json_track, "SNG_ID");
     
     // una vez que tenemos el id, buscamos si ya tenemos ese track
@@ -736,10 +744,7 @@ static int deezer_get_track_from_json(const cJSON *json_track, track_t **track) 
         (*track)->title = strdup(title->valuestring);
     }
     if (cJSON_IsString(token)) {
-        LOG("=== %s ===\n", title->valuestring);
-        LOG("OG: %s\n", token->valuestring);
         (*track)->token = strdup(token->valuestring);
-        LOG("CP: %s\n", (*track)->token);
     }
     if (cJSON_IsNumber(token_expire)) {
         (*track)->token_expire = (time_t)token_expire->valuedouble;
@@ -876,7 +881,7 @@ static int deezer_get_track_data(track_t **track, unsigned long id) {
 
     cJSON *results = cJSON_GetObjectItem(json, "results");
     cJSON *DATA = cJSON_GetObjectItem(results, "DATA");
-    
+   
     err = deezer_get_track_from_json(DATA, &(*track));
 
     if (DC_SUCCESS != err) {
