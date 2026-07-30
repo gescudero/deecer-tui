@@ -114,13 +114,11 @@ int main() {
                         LOG("Hemos tenido problemas con el desencriptado.\n");
                         break;
                     }
-
+                    player_stop();
                     if (player_thread != 0) {
-                        pthread_cancel(player_thread);
                         pthread_join(player_thread, NULL);
                         player_thread = 0;
                     }
-                    
                     // ejecutamos la reproduccion en un thread aparte (parece que funciona!!)    
                     if (pthread_create(&player_thread, NULL, thread_player_openurl, (void*)filename) != 0) {
                         LOG("Error creando el thread\n");
@@ -174,14 +172,13 @@ int main() {
                     }
                     LOG("[main] Fichero creado\n");
                     fclose(fptr);
-     
+                    
+                    player_stop();
                     if (player_thread != 0) {
-                        pthread_cancel(player_thread);
                         pthread_join(player_thread, NULL);
                         player_thread = 0;
                     }
-
-                   if (pthread_create(&player_thread, NULL, thread_player_openplaylist, (void*)playlist_path) != 0) {
+                    if (pthread_create(&player_thread, NULL, thread_player_openplaylist, (void*)playlist_path) != 0) {
                             fprintf(stderr, "Error creando el thread\n");
                     }
                 }

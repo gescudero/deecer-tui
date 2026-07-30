@@ -23,6 +23,7 @@ static void player_notify_now_playing(char *filename);
 // ejemplo simple.c de mpv-player/mpv-examples
 // debo ajustarla a mis necesidades
 static inline void check_error(int status) {
+    LOG("check_error: %d\n", status);
     if (status < 0) {
         LOG("mpv API error: %s\n", mpv_error_string(status));
     }
@@ -65,8 +66,8 @@ void player_end() {
 
 // esta funcion es capaz de reproducir una url si no esta encriptada
 void player_openurl(char *url){
-    player_stop();
     const char *cmd[] = {"loadfile", url, NULL};
+    LOG("antes de mpv_command...\n");
     check_error(mpv_command(mpv, cmd));
     LOG("[player] Loadfile command...\n");
     player_running = 1;
@@ -74,13 +75,14 @@ void player_openurl(char *url){
         mpv_event *event = mpv_wait_event(mpv, 100);
         LOG("event: %s\n", mpv_event_name(event->event_id));
         if (event->event_id == MPV_EVENT_SHUTDOWN) {
+            player_running = 0;
             break;
         }
     }
+    player_running = 0;
 }
 // igual que la funcion anterior pero que recibe una lista
 void player_openplaylist(char *url) {
-    player_stop();
     const char *cmd[] = {"loadlist", url, NULL};
     check_error(mpv_command(mpv,cmd));
     LOG("[player] Loadlist command...\n");
@@ -95,6 +97,7 @@ void player_openplaylist(char *url) {
             break;
         } else if (event->event_id == MPV_EVENT_END_FILE) {
             LOG("MPV_EVENT_END_FILE\n");
+            player_running = 0;
             //break;
         } else if (event->event_id == MPV_EVENT_PROPERTY_CHANGE) {
             LOG("MPV_EVENT_PROPERTY_CHANGE\n");
@@ -111,6 +114,7 @@ void player_openplaylist(char *url) {
     LOG("[playlist] - Hemos salido del bucle de notificaciones ------\n");
 }
 void player_stop() {
+    player_running = 0;
     const char *cmd[] = {"stop", "", NULL};
     check_error(mpv_command(mpv, cmd));
     LOG("[player] Comando stop\n");
