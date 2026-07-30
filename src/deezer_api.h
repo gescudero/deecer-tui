@@ -36,7 +36,7 @@ struct track_t {
     char *title; //results:DATA:SNG_TITLE
     char *token; //results:TRACK_TOKEN
     time_t token_expire; //results:TRACK_TOKEN_EXPIRE
-    artist_t **artist; //results:ARTISTS ->
+    artist_t **artists; //results:ARTISTS ->
     int nb_artists; // number of artists 
     album_t *album; //results:ALB_ID ->
     char *media_url; // peticion a -> DEEZER_MEDIA_URL

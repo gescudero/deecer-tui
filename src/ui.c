@@ -486,20 +486,20 @@ ui_action_t ui_handle_input(char *return_value) {
             }
             break;
         case KEY_DOWN:
-            // en todos los casos menos con el playerui que mueve en 
+            // en itodos los casos menos con el playerui que mueve en 
             // horizontal <- ->
             if (strcmp(focused_section->name, "playerui") != 0) {
                 section_next_option(focused_section);
             }
             break;
         case KEY_LEFT:
-            // solo en el caso de player ui 
+            // soloi en el caso de player ui 
             if (strcmp(focused_section->name, "playerui") == 0) {
                 section_prev_option(focused_section);
             }
             break;
         case KEY_RIGHT:
-            // solo en el caso de player ui 
+            // solo ien el caso de player ui 
             if (strcmp(focused_section->name, "playerui") == 0) {
                 section_next_option(focused_section);
             }

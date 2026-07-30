@@ -152,7 +152,7 @@ void content_add_track(content_t *cont, track_t *track) {
     if (deezer_track_is_valid(track)) {
         char *tmp_text;
         if (0 < track->nb_artists) {
-            asprintf(&tmp_text, "%s (%s)", track->title, track->artist[0]->name);
+            asprintf(&tmp_text, "%s (%s)", track->title, track->artists[0]->name);
         } else {
             asprintf(&tmp_text, "%s", track->title);
         }

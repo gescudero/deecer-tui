@@ -126,7 +126,7 @@ int main() {
                         LOG("Error creando el thread\n");
                     }
                     char *nowplaying_text = NULL;
-                    asprintf(&nowplaying_text, "%s - %s", track->artist[0]->name, track->title);
+                    asprintf(&nowplaying_text, "%s - %s", track->artists[0]->name, track->title);
                     now_playing_change_content(nowplaying_text);
                 }
                 break;

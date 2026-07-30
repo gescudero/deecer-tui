@@ -91,6 +91,7 @@ void player_openplaylist(char *url) {
             LOG("[playlist] event: %s\n", mpv_event_name(event->event_id));
         }
         if (event->event_id == MPV_EVENT_SHUTDOWN) {
+            player_running = 0;
             break;
         } else if (event->event_id == MPV_EVENT_END_FILE) {
             LOG("MPV_EVENT_END_FILE\n");
@@ -106,6 +107,7 @@ void player_openplaylist(char *url) {
             }
         }
     }
+    player_running = 0;
     LOG("[playlist] - Hemos salido del bucle de notificaciones ------\n");
 }
 void player_stop() {
@@ -161,10 +163,10 @@ static void player_notify_now_playing(char *filename) {
             return;
         }
         char *real_title = NULL;
-        if (!track->artist[0] || !track->artist[0]->name) {
+        if (!track->artists[0] || !track->artists[0]->name) {
             asprintf(&real_title, "%s (unknown)", track->title);
         } else {
-            asprintf(&real_title, "%s (%s)", track->title, track->artist[0]->name);
+            asprintf(&real_title, "%s (%s)", track->title, track->artists[0]->name);
         }
         LOG("Nueva canción: %s\n",real_title);
         now_playing_change_content(real_title);
