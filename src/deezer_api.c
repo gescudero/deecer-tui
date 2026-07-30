@@ -512,37 +512,6 @@ bool deezer_playlist_is_valid(const playlist_t *playlist) {
     return true;
 }
 
-void deezer_cleanup() {
-    for (int i=0; i<nb_tracks; i++) {
-        deezer_free_track(tracks[i]);
-    }
-    for (int i=0; i<nb_artists; i++) {
-        deezer_free_artist(artists[i]);
-    }
-    for (int i=0; i<nb_albums; i++) {
-        deezer_free_album(albums[i]);
-    }
-    for (int i=0; i<nb_playlists; i++) {
-        deezer_free_playlist(playlists[i]);
-    }
-    deezer_free_user(user);
-    deezer_free_client(client);
-
-    if (tracks) {
-        free(tracks);
-    }
-    if (artists) {
-        free(artists);
-    }
-    if (albums) {
-        free(albums);
-    }
-    if (playlists) {
-        free(playlists);
-    }
-    return;
-}
-
 /*******************
  *
  * Private functions
@@ -572,8 +541,6 @@ static int deezer_create_user() {
         return DC_ERROR_MEMORY_MAP_FAILED;
     }
 
-    LOG("Memoria reservada para la usuaria con éxito.\n");
-   
     int err = deezer_make_request(DC_GET_TOKEN, false, "");
     if (DC_SUCCESS != err) {
         return err;
@@ -678,7 +645,6 @@ static int deezer_get_playlists_for_user() {
     
     cJSON *iterator = NULL;
     cJSON_ArrayForEach(iterator, data) {
-        LOG("Vamos a añdir una playlists a la lista temporal.\n");
         lista = realloc(lista, (user_nb_playlists + 1) * sizeof(playlist_t*));
         if (!lista) {
             cJSON_Delete(json);
@@ -707,7 +673,6 @@ static int deezer_get_playlists_for_user() {
         lista[user_nb_playlists] = playlist;
         user_nb_playlists++;
         deezer_add_playlist(playlist);
-        LOG("Añadida playlists a la lista temporal. %s\n", lista[user_nb_playlists - 1]->title);
     }
     cJSON_Delete(json);
     user->playlists = lista;
@@ -735,7 +700,6 @@ static int deezer_create_playlist(track_t **tracklist, int nb_tracks, playlist_t
 // TRACK
 // =====
 static int deezer_get_track_from_json(const cJSON *json_track, track_t **track) {
-    LOG("Nos piden sacar un track de un json\n")
     if (!cJSON_IsObject(json_track)) {
         return DC_ERROR_CJSON_INVALID;
     }    
@@ -768,7 +732,10 @@ static int deezer_get_track_from_json(const cJSON *json_track, track_t **track) 
         (*track)->title = strdup(title->valuestring);
     }
     if (cJSON_IsString(token)) {
+        LOG("=== %s ===\n", title->valuestring);
+        LOG("OG: %s\n", token->valuestring);
         (*track)->token = strdup(token->valuestring);
+        LOG("CP: %s\n", (*track)->token);
     }
     if (cJSON_IsNumber(token_expire)) {
         (*track)->token_expire = (time_t)token_expire->valuedouble;
@@ -1584,6 +1551,43 @@ static size_t writefilecallback(void *ptr, size_t size, size_t nmemb, FILE *stre
 // =========
 // CLEANERS
 // =========
+void deezer_cleanup() {
+        for (int i=0; i<nb_artists; i++) {
+        deezer_free_artist(artists[i]);
+    }
+    for (int i=0; i<nb_albums; i++) {
+        deezer_free_album(albums[i]);
+    }
+    for (int i=0; i<nb_playlists; i++) {
+        deezer_free_playlist(playlists[i]);
+    }
+    for (int i=0; i<nb_tracks; i++) {
+        deezer_free_track(tracks[i]);
+    }
+    deezer_free_user(user);
+    deezer_free_client(client);
+
+        if (artists) {
+        free(artists);
+        artists = NULL;
+    }
+    if (albums) {
+        free(albums);
+        albums = NULL;
+    }
+    if (playlists) {
+        free(playlists);
+        playlists = NULL;
+    }
+    if (tracks) {
+        free(tracks);
+        tracks = NULL;
+    }
+
+    return;
+}
+
+
 static void deezer_free_client(deezer_client_t *client) {
     free(client->session_id);
     free(client->api_token);
@@ -1597,26 +1601,39 @@ static void deezer_free_user(user_t *user) {
     free(user->email);
     free(user->lovedtracks_id); 
     free(user->user_token);
-    free(user->playlists);
+    //free(user->playlists);
     free(user);
 }
 static void deezer_free_track(track_t *track) {
     free(track->title);
     free(track->token);
-    free(track->artist);
+    //free(track->artists);
     free(track->media_url);
+    free(track);
 }
 static void deezer_free_artist(artist_t *artist) {
     free(artist->name);
     free(artist->tops);
-    free(artist->albums);
+    //free(artist->albums);
+    free(artist);
 }
 static void deezer_free_album(album_t *album) {
     free(album->title);
-    free(album->artists);
-    free(album->tracks);
+    //free(album->artists);
+    //free(album->tracks);
+    free(album);
 }
 static void deezer_free_playlist(playlist_t *playlist) {
-    free(playlist->title);
-    free(playlist->tracks);
+    // if (!playlist) {
+        // return;
+    // }
+    // if (playlist->title) {
+        free(playlist->title);
+        // playlist->title = NULL;
+    // }
+    // if (playlist->tracks) {
+        free(playlist->tracks);
+        // playlist->tracks = NULL;
+    // }
+    free(playlist);
 }
