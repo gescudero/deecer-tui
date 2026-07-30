@@ -97,7 +97,6 @@ void player_openplaylist(char *url) {
             break;
         } else if (event->event_id == MPV_EVENT_END_FILE) {
             LOG("MPV_EVENT_END_FILE\n");
-            player_running = 0;
             //break;
         } else if (event->event_id == MPV_EVENT_PROPERTY_CHANGE) {
             LOG("MPV_EVENT_PROPERTY_CHANGE\n");

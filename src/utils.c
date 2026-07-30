@@ -238,7 +238,7 @@ void content_fill_with_playlists(content_t *dest, unsigned long playlist_id) {
     content_add_playlist_in_row(dest, playlist, 0);
 
     // Añadimos los tracks
-    for (int i=1; i<playlist->nb_tracks; i++) {
+    for (int i=0; i<playlist->nb_tracks; i++) {
         content_add_track(dest, playlist->tracks[i]);
     }
 }

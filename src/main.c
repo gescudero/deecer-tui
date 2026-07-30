@@ -211,6 +211,7 @@ int main() {
     }
     // Rutinas de cerrado de la aplicacion 
     LOG("Vamos cerrando:\n");
+    player_stop();
     //primero le decimos a mpv que vaya saliendo de su bucle
     //seteando la variable global player_running a 0,
     //esperamos a que el hilo se acabe y lo seteamos a 0
