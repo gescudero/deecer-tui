@@ -144,7 +144,7 @@ int main() {
                     }
                     char *nowplaying_text = NULL;
                     asprintf(&nowplaying_text, "%s - %s", track->artists[0]->name, track->title);
-                    now_playing_change_content(nowplaying_text);
+                    now_playing_set_content(nowplaying_text);
                 }
                 break;
             }

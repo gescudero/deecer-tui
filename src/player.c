@@ -183,7 +183,7 @@ static void player_notify_now_playing(char *filename) {
             asprintf(&real_title, "%s (%s)", track->title, track->artists[0]->name);
         }
         LOG("Nueva canción: %s\n",real_title);
-        now_playing_change_content(real_title);
+        now_playing_set_content(real_title);
         free(real_title);
     }
 }

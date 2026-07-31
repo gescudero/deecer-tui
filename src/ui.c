@@ -158,27 +158,32 @@ static void menu_create_content();
 static deecer_result_t menu_create_window();
 
 /**
- *
+ * Create the first content of the search section
+ * and initialize ready for insert text
  */
 static void search_create_content();
 
 /**
- *
+ * Create the window fro search, sets its dimensions
+ * and draw border and init text calling search_init_text()
  */
 static deecer_result_t search_create_window();
 
 /**
- *
+ * Starts the text in search content printing
+ * "Search ..."
  */
 static void search_init_text();
 
 /**
- *
+ * Create the window of the center section with its 
+ * dimensions and style and print its content
  */
 static deecer_result_t center_create_window();
 
 /**
- *
+ * Create the first content of 
+ * the menu section
  */
 static void center_create_content();
 
@@ -751,15 +756,10 @@ static deecer_result_t center_create_window() {
     return DC_SUCCESS;
 }
 void center_create_content() {
-     // contenido
     center.has_focus = false;
     center.selected_line = 0; // numero de linea seleccionada
     center.content = content_create(center.height);
-    content_add_line(center.content, "Ábaco ábaco Bienvenido a deecer <3");
-    char *tmp_str;
-    asprintf(&tmp_str, "Tamaño de panel. width:%d ; height:%d", center.width, center.height);
-    content_add_line(center.content, tmp_str);
-    free(tmp_str);
+    content_add_line(center.content, "Bienvenido a deecer <3");
 }
 
 static deecer_result_t playerui_create_window() {
