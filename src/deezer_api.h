@@ -100,7 +100,7 @@ content_t *deezer_search(const char *query);
  * @param un puntero a string donde escribir el nombre de fichero
  * @result error code 
  */
-int deezer_get_media(track_t *track, char **filename);
+deecer_result_t deezer_get_media(track_t *track, char **filename);
 
 /**
  * Se solicita solo el path al fichero de audio

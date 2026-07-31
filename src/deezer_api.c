@@ -69,7 +69,7 @@ static playlist_t **playlists = NULL;
  * @param configuration struct 
  * @return error code 
  */
-static int deezer_create_client(); 
+static deecer_result_t deezer_create_client(); 
 
 /***
  * Create the deezer user for connections to deezer api
@@ -79,19 +79,19 @@ static int deezer_create_client();
  *
  * @return error code
  */
-static int deezer_create_user();
+static deecer_result_t deezer_create_user();
 
 /**
  * Create the playlists from user at the 
  * begining.
  */
-static int deezer_get_playlists_for_user(); 
+static deecer_result_t deezer_get_playlists_for_user(); 
 
 /**
  *  Create playlist from a list of tracks
  *
  */
-static int deezer_create_playlist_with_tracks(track_t **tracklist, int nb_tracks, playlist_t **outplaylist);
+static deecer_result_t deezer_create_playlist_with_tracks(track_t **tracklist, int nb_tracks, playlist_t **outplaylist);
 static deecer_result_t deezer_init_playlist(playlist_t **playlist);
 
 /**
@@ -104,7 +104,7 @@ static deecer_result_t deezer_init_playlist(playlist_t **playlist);
  * @param ref track_t object to write data
  * @return error code
  */
-static int deezer_get_track_from_json(const cJSON *json_track, track_t **track);
+static deecer_result_t deezer_get_track_from_json(const cJSON *json_track, track_t **track);
 
 /**
  * Get track from pool
@@ -120,7 +120,7 @@ static track_t *deezer_get_track_from_pool(unsigned long id);
  * @param track The track pointer to add to the pool
  * @return RESULT CODE
  */
-static int deezer_add_track(track_t *track);
+static deecer_result_t deezer_add_track(track_t *track);
 
 /**
  * Check if track id exists on pool
@@ -134,7 +134,7 @@ static bool deezer_track_exists(unsigned long id);
  * Ask to the API for track info
  *
  */
-static int deezer_get_track_data(track_t **track, unsigned long id);
+static deecer_result_t deezer_get_track_data(track_t **track, unsigned long id);
 
 /**
  * Generate an artist_t object from a json snippet.
@@ -144,7 +144,7 @@ static int deezer_get_track_data(track_t **track, unsigned long id);
  * @param reference to a artist_t pointer
  * @return error code
  */
-static int deezer_get_artist_from_json(const cJSON *json_artist, artist_t **artist);
+static deecer_result_t deezer_get_artist_from_json(const cJSON *json_artist, artist_t **artist);
 
 /**
  * Get artist from pool. Can use deezer_artist_exists first
@@ -161,7 +161,7 @@ static artist_t *deezer_get_artist_from_pool(unsigned long id);
  * @param artist The artist pointer to add to the pool
  * @return RESULT CODE
  */
-static int deezer_add_artist(artist_t *artist);
+static deecer_result_t deezer_add_artist(artist_t *artist);
 
 /**
  * Check if artist id exists on pool
@@ -176,7 +176,7 @@ static bool deezer_artist_exists(unsigned long id);
  * exists on pool
  *
  */
-static int deezer_get_album_from_json(const cJSON *json_album, album_t **album);
+static deecer_result_t deezer_get_album_from_json(const cJSON *json_album, album_t **album);
 
 /**
  * Get album from pool. Can use deezer_album_exists first
@@ -191,7 +191,7 @@ static album_t *deezer_get_album_from_pool(unsigned long id);
  * Add album to pool 
  *
  */
-static int deezer_add_album(album_t *album);
+static deecer_result_t deezer_add_album(album_t *album);
 
 /**
  * Check if album id exists on pool
@@ -206,7 +206,7 @@ static bool deezer_album_exists(unsigned long id);
  * exists on pool
  *
  */
-static int deezer_get_playlist_from_json(const cJSON *json_playlist, playlist_t **playlist);  
+static deecer_result_t deezer_get_playlist_from_json(const cJSON *json_playlist, playlist_t **playlist);  
  
 /**
  * Get playlist from pool. Can use deezer_playlist_exists first
@@ -231,7 +231,7 @@ static deecer_result_t deezer_get_media_url_from_json(char **out_url, cJSON *med
  * Add playlist to pool 
  *
  */
-static int deezer_add_playlist(playlist_t *playlist);
+static deecer_result_t deezer_add_playlist(playlist_t *playlist);
 
 /**
  * Check if playlist id exists on pool
@@ -244,7 +244,7 @@ static bool deezer_playlist_exists(unsigned long id);
 /**
  * Add a track to the list of tracks of a playlist
  */
-static int deezer_playlist_add_track(playlist_t *playlist, track_t *track); 
+static deecer_result_t deezer_playlist_add_track(playlist_t *playlist, track_t *track); 
 
 
 // direct request to api
@@ -259,7 +259,7 @@ static int deezer_playlist_add_track(playlist_t *playlist, track_t *track);
  * and write it in the pointer passed as param
  *
  */
-static int deezer_get_playlist_data(playlist_t **playlist, unsigned long id);
+static deecer_result_t deezer_get_playlist_data(playlist_t **playlist, unsigned long id);
 
 /**
  * Get url for downloading media
@@ -267,7 +267,7 @@ static int deezer_get_playlist_data(playlist_t **playlist, unsigned long id);
  * @param pointer to track pointer
  * @return error code
  */
-static int deezer_get_media_url(track_t *track);
+static deecer_result_t deezer_get_media_url(track_t *track);
 
 /****
  * Downloads media file to a temporary folder
@@ -277,7 +277,7 @@ static int deezer_get_media_url(track_t *track);
  * @param char **path: path to file. Caller has to free char*
  * @return error code
  */
-static int deezer_download_media_file(track_t *track);
+static deecer_result_t deezer_download_media_file(track_t *track);
 
 /**
  * Takes crypted file stored locally and generate a new decrypted audio file
@@ -286,7 +286,7 @@ static int deezer_download_media_file(track_t *track);
  * @param the track_t to generate file paths
  * @return error code
  */
-static int deezer_decrypt_file(track_t *track);
+static deecer_result_t deezer_decrypt_file(track_t *track);
 
 /**
  * Make all other preparations together and request
@@ -298,28 +298,28 @@ static int deezer_decrypt_file(track_t *track);
  * 6. make request
  * 7. check if request return a json filetype (dont check content)
  */
-static int deezer_make_request(enum deezer_requests request, bool needToken, const char *param);
+static deecer_result_t deezer_make_request(enum deezer_requests request, bool needToken, const char *param);
 
 /**
  * Set curlopt with common values for all
  * requests except media file download 
  *
  */
-static int deezer_curl_set_init_options(); 
+static deecer_result_t deezer_curl_set_init_options(); 
 
 /**
  * Set curl headers 
  *
  * @param boolean is token is needed for request (only false in deezer_get_user)
  */
-static int deezer_curl_set_headers(bool needToken); 
+static deecer_result_t deezer_curl_set_headers(bool needToken); 
 
 /**
  * Set url for request. build url depending on request type
  *
  * @param enum deezer_requests 
  */
-static int deezer_curl_set_url(enum deezer_requests request); 
+static deecer_result_t deezer_curl_set_url(enum deezer_requests request); 
 
 /**
  * Set json for POST depending on request type.
@@ -328,7 +328,7 @@ static int deezer_curl_set_url(enum deezer_requests request);
  *      - search: query search
  *      - get media: track_token 
  */
-static int deezer_curl_set_post_json(enum deezer_requests request, const char *param);
+static deecer_result_t deezer_curl_set_post_json(enum deezer_requests request, const char *param);
 
 /**
  * Callback for receiving data from requests
@@ -424,7 +424,7 @@ content_t *deezer_search(const char *query) {
     return resp;
 }
 
-int deezer_get_media(track_t *track, char **filename) {
+deecer_result_t deezer_get_media(track_t *track, char **filename) {
     // seteamos el path 
     *filename = deezer_get_filepath(track);
     //comprobamos si ya existe el fichero y nos 
@@ -536,7 +536,7 @@ bool deezer_playlist_is_valid(const playlist_t *playlist) {
  *
  ******************/
 
-static int deezer_create_client()  {
+static deecer_result_t deezer_create_client()  {
     client = calloc(1, sizeof(deezer_client_t));
     if (client == NULL) {
         return DC_ERROR_MEMORY_MAP_FAILED;
@@ -547,7 +547,7 @@ static int deezer_create_client()  {
 // ====
 // USER
 // ====
-static int deezer_create_user() {
+static deecer_result_t deezer_create_user() {
     // reservamos la memoria para la usuaria
     user = calloc(1, sizeof(user_t));
     if (!user) {
@@ -623,7 +623,7 @@ static int deezer_create_user() {
     return DC_SUCCESS;
 }
 
-static int deezer_get_playlists_for_user() {
+static deecer_result_t deezer_get_playlists_for_user() {
     int user_nb_playlists = 0;
     playlist_t **lista = NULL;
 
@@ -699,7 +699,7 @@ static int deezer_get_playlists_for_user() {
     return DC_SUCCESS;
 }
 
-static int deezer_create_playlist_with_tracks(track_t **tracklist, int nb_tracks, playlist_t **playlist) {
+static deecer_result_t deezer_create_playlist_with_tracks(track_t **tracklist, int nb_tracks, playlist_t **playlist) {
     if (DC_SUCCESS != deezer_init_playlist(&(*playlist)))
     {
         return DC_ERROR_MEMORY_MAP_FAILED;
@@ -714,7 +714,7 @@ static int deezer_create_playlist_with_tracks(track_t **tracklist, int nb_tracks
 // =====
 // TRACK
 // =====
-static int deezer_get_track_from_json(const cJSON *json_track, track_t **track) {
+static deecer_result_t deezer_get_track_from_json(const cJSON *json_track, track_t **track) {
     if (!cJSON_IsObject(json_track)) {
         return DC_ERROR_CJSON_INVALID;
     }
@@ -790,7 +790,7 @@ static track_t *deezer_get_track_from_pool(unsigned long id) {
     return NULL;
 }
 
-static int deezer_add_track(track_t *track) {
+static deecer_result_t deezer_add_track(track_t *track) {
     if (track == NULL) {
         return DC_ERROR_INICIALIZATION_FAILED; 
     }
@@ -862,7 +862,7 @@ static bool deezer_track_exists(unsigned long id) {
     return false;
 }
 
-static int deezer_get_track_data(track_t **track, unsigned long id) {
+static deecer_result_t deezer_get_track_data(track_t **track, unsigned long id) {
     // 1.inicializamos *track, borrando lo que hubiere si hay algo
     if (!*track) {
         track = calloc(1, sizeof(track_t*));
@@ -922,7 +922,7 @@ static int deezer_get_track_data(track_t **track, unsigned long id) {
 // ======
 // ARTIST
 // ======
-static int deezer_get_artist_from_json(const cJSON *json_artist, artist_t **artist) {
+static deecer_result_t deezer_get_artist_from_json(const cJSON *json_artist, artist_t **artist) {
     if (!cJSON_IsObject(json_artist)) {
         return DC_ERROR_CJSON_INVALID;
     }
@@ -954,7 +954,7 @@ static artist_t *deezer_get_artist_from_pool(unsigned long id) {
     return NULL;
 }
 
-static int deezer_add_artist(artist_t *artist) {
+static deecer_result_t deezer_add_artist(artist_t *artist) {
     if (artist == NULL) {
         return DC_ERROR_INICIALIZATION_FAILED; 
     }
@@ -992,7 +992,7 @@ static bool deezer_artist_exists(unsigned long id) {
 // =====
 // ALBUM
 // =====
-static int deezer_get_album_from_json(const cJSON *json_album, album_t **album) {
+static deecer_result_t deezer_get_album_from_json(const cJSON *json_album, album_t **album) {
     // NOT IMPLEMENTED
     return DC_ERROR_NOT_IMPLEMENTED;
 }
@@ -1006,7 +1006,7 @@ static album_t *deezer_get_album_from_pool(unsigned long id) {
     return NULL;
 }
 
-static int deezer_add_album(album_t *album) {
+static deecer_result_t deezer_add_album(album_t *album) {
     return DC_ERROR_NOT_IMPLEMENTED;
 }
 
@@ -1022,7 +1022,7 @@ static bool deezer_album_exists(unsigned long id) {
 // ========
 // PLAYLIST 
 // ========
-static int deezer_get_playlist_from_json(const cJSON *json_playlist, playlist_t **playlist) {
+static deecer_result_t deezer_get_playlist_from_json(const cJSON *json_playlist, playlist_t **playlist) {
     // NOT IMPLEMENTED
     return DC_ERROR_NOT_IMPLEMENTED;
 }
@@ -1036,7 +1036,7 @@ static playlist_t *deezer_get_playlist_from_pool(unsigned long id) {
     return NULL;
 }
 
-static int deezer_get_playlist_data(playlist_t **playlist, unsigned long id) {
+static deecer_result_t deezer_get_playlist_data(playlist_t **playlist, unsigned long id) {
     /*
      * 1. nos pasan un puntero a un puntero de playlist.
      *    puede ser que tenga datos pero no tenga tracks
@@ -1214,7 +1214,7 @@ static deecer_result_t deezer_get_media_url_from_json(char **out_url, cJSON *med
     return DC_SUCCESS;
 }
 
-static int deezer_add_playlist(playlist_t *playlist) {
+static deecer_result_t deezer_add_playlist(playlist_t *playlist) {
     if (!playlist || !deezer_playlist_is_valid(playlist)) {
         LOG("No se ha podido añadir una playlists a la pool.\n");
         return DC_ERROR_UNKNOWN;
@@ -1251,7 +1251,7 @@ static bool deezer_playlist_exists(unsigned long id) {
     return false;
 }
 
-static int deezer_playlist_add_track(playlist_t *playlist, track_t *track) {
+static deecer_result_t deezer_playlist_add_track(playlist_t *playlist, track_t *track) {
     if (!playlist || !track ) {
         return DC_ERROR_UNKNOWN;
     }
@@ -1286,7 +1286,7 @@ static int deezer_playlist_add_track(playlist_t *playlist, track_t *track) {
 // ===============
 // MEDIA FUNCTIONS
 // ===============
-static int deezer_get_media_url(track_t *track) {
+static deecer_result_t deezer_get_media_url(track_t *track) {
     if (track == NULL) {
         return DC_ERROR_UNKNOWN;
     }
@@ -1348,7 +1348,7 @@ static int deezer_get_media_url(track_t *track) {
     return DC_SUCCESS;
 }
 
-static int deezer_download_media_file(track_t *track) {
+static deecer_result_t deezer_download_media_file(track_t *track) {
     char *path = deezer_get_filepath(track);
     if (!client->curl_handle) {
         return DC_ERROR_CURL_INIT;
@@ -1370,7 +1370,7 @@ static int deezer_download_media_file(track_t *track) {
     }
 }
 
-static int deezer_decrypt_file(track_t *track) {
+static deecer_result_t deezer_decrypt_file(track_t *track) {
     LOG("Vamos a desencriptar %s\n", track->title);
 
     char *track_id = NULL;
@@ -1416,7 +1416,7 @@ static int deezer_decrypt_file(track_t *track) {
 // ============
 // CURL HELPERS
 // ============
-static int deezer_make_request(enum deezer_requests request, bool needToken, const char *param) {
+static deecer_result_t deezer_make_request(enum deezer_requests request, bool needToken, const char *param) {
     int err;
     err = deezer_curl_set_init_options();
     if (err != DC_SUCCESS) {
@@ -1470,7 +1470,7 @@ static int deezer_make_request(enum deezer_requests request, bool needToken, con
     return DC_SUCCESS;
 }
 
-static int deezer_curl_set_init_options() {
+static deecer_result_t deezer_curl_set_init_options() {
     if (client->curl_handle == NULL) {
         return DC_ERROR_INICIALIZATION_FAILED;
     }
@@ -1480,7 +1480,7 @@ static int deezer_curl_set_init_options() {
     return DC_SUCCESS;
 }
 
-static int deezer_curl_set_headers(bool needToken) {
+static deecer_result_t deezer_curl_set_headers(bool needToken) {
     // Creamos los headers [man CURLOPT_HTTPHEADER]
     struct curl_slist *list = NULL;
     char *cookie = NULL;
@@ -1501,7 +1501,7 @@ static int deezer_curl_set_headers(bool needToken) {
     return DC_SUCCESS;
     
 }
-static int deezer_curl_set_url(enum deezer_requests request) {
+static deecer_result_t deezer_curl_set_url(enum deezer_requests request) {
     //LOG("Entrando en ... deezer_curl_set_url(enum deezer_requests request)\n");
     // construimos la url
     char *url = NULL;
@@ -1546,7 +1546,7 @@ static int deezer_curl_set_url(enum deezer_requests request) {
     curl_easy_setopt(client->curl_handle, CURLOPT_URL, url);
     return DC_SUCCESS;
 }
-static int deezer_curl_set_post_json(enum deezer_requests request, const char *param) {
+static deecer_result_t deezer_curl_set_post_json(enum deezer_requests request, const char *param) {
     char *post_data = NULL;
     cJSON *json = cJSON_CreateObject();
     if (json == NULL) {
