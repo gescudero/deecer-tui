@@ -32,6 +32,8 @@ typedef enum {
     UI_ACTION_STOP,
     UI_ACTION_FORWARD,
     UI_ACTION_BACK,
+    UI_ACTION_SHUFFLE,
+    UI_ACTION_UNSHUFFLE,
     UI_ACTION_CHANGE_FOCUS
 } ui_action_t;
 
@@ -42,13 +44,14 @@ typedef enum {
     UI_PLAYER_PLAY,
     UI_PLAYER_PAUSE,
     UI_PLAYER_FORWARD,
+    UI_PLAYER_SHUFFLE,
 } ui_player_button_t;
 
 /**
  * UI init. Prepare ncurses and create WINDOW
  * and the different sections and contents
  */
-bool ui_init();
+deecer_result_t ui_init();
 
 /**
  * Clear windows and free memory of curses and contents

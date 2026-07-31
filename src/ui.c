@@ -40,7 +40,7 @@ static void ui_init_content();
 /**
  * Init ncurses and windows of sections
  */
-static bool ui_init_windows();
+static deecer_result_t ui_init_windows();
 
 /**
  * Frees windows and curses
@@ -205,7 +205,12 @@ static ui_action_t playerui_get_selected_action();
 /**
  *
  */
-static int now_playing_create_window();
+static ui_action_t playerui_toggle_shuffle(); 
+
+/**
+ *
+ */
+static deecer_result_t now_playing_create_window();
 
 /**
  *
@@ -215,7 +220,7 @@ static void now_playing_create_content();
 /**
  *
  */
-static int user_playlists_create_window();
+static deecer_result_t user_playlists_create_window();
 
 /**
  *
@@ -226,7 +231,7 @@ static void user_playlists_create_content();
 // PUBLIC FUNCTIONS
 // ================
 
-bool ui_init() {
+deecer_result_t ui_init() {
     ui_init_content();
     return ui_init_windows();
 }
@@ -364,7 +369,7 @@ static void ui_init_content() {
     user_playlists_create_content();
 }
 
-static bool ui_init_windows() {
+static deecer_result_t ui_init_windows() {
     // funciones de inicializacion de ncurses
     setlocale(LC_ALL, "");
     setlocale(LC_NUMERIC, "C");
@@ -378,31 +383,44 @@ static bool ui_init_windows() {
     refresh();
     // dimensiones de la pantalla
     getmaxyx(stdscr, screen_height, screen_width);
-
+    
+    int err;
     // creamos nuestras secciones
-    if (DC_SUCCESS != menu_create_window()) {
+    err = menu_create_window();
+    if (DC_SUCCESS != err) {
+        LOG("Error %d creando menu window.\n", err);
         ui_end();
-        return false;
+        return err;
     }
-    if (DC_SUCCESS != search_create_window()) {
+    err = search_create_window();
+    if (DC_SUCCESS != err) {
+        LOG("Error %d creando search window.\n", err);
         ui_end();
-        return false;
+        return err;
     }
-    if (DC_SUCCESS != !center_create_window()) {
+    err = center_create_window();
+    if (DC_SUCCESS != err) {
+        LOG("Error %d creando center window.\n", err);
         ui_end();
-        return false;
+        return err;
     }
-    if (DC_SUCCESS != !playerui_create_window()) {
-        return false;
+    err = playerui_create_window();
+    if (DC_SUCCESS != err) {
+        LOG("Error %d creando playerui window.\n", err);
+        return err;
     }
-    if (DC_SUCCESS != !now_playing_create_window()) {
-        return false;
+    err = now_playing_create_window();
+    if (DC_SUCCESS != err) {
+        LOG("Error %d creando now playing window.\n", err);
+        return err;
     }
-    if (DC_SUCCESS != user_playlists_create_window()) {
-        return false;
+    err = user_playlists_create_window();
+    if (DC_SUCCESS != err) {
+        LOG("Error %d creando user playlist window.\n", err);
+        return err;
     }
 
-    return true;
+    return DC_SUCCESS;
 }
 
 static void ui_end_windows() {
@@ -702,8 +720,6 @@ static deecer_result_t menu_create_window() {
     return DC_SUCCESS; // devolvemos OK
 }
 
-
-
 static void search_create_content() {
      // Contenido 
     search.has_focus = false; // no tenemos el foco al inicial la app
@@ -720,13 +736,13 @@ static deecer_result_t search_create_window() {
     search.win = newwin(search.height, search.width, search.starty, search.startx);
 
     if (search.win == NULL) {
-        return 0; // devolvemos error
+        return DC_ERROR_UI_INIT; // devolvemos error
     }
     box(search.win, 0, 0);
     wrefresh(search.win);
 
     search_init_text(); // inicializamos el texto
-    return 1;
+    return DC_SUCCESS;
 }
 static void search_init_text() {
     content_add_line(search.content, "Search ..."); // añadimos la linea al contenido.
@@ -792,6 +808,7 @@ static void playerui_create_content() {
     content_add_line(playerui.content, "[PLAY]");
     content_add_line(playerui.content, "[PAUSE]");
     content_add_line(playerui.content, "[FORWARD]");
+    content_add_line(playerui.content, "[SHUFFLE]");
 }
 
 static ui_action_t playerui_get_selected_action() {
@@ -811,10 +828,24 @@ static ui_action_t playerui_get_selected_action() {
         case UI_PLAYER_FORWARD:
             return UI_ACTION_FORWARD;
             break;
+        case UI_PLAYER_SHUFFLE:
+            return playerui_toggle_shuffle();
+            break;
         default:
             return UI_ACTION_NONE;
             break;
     }
+}
+
+static ui_action_t playerui_toggle_shuffle() {
+    if (strcmp(playerui.content->text[5], "[SHUFFLE]") == 0) {
+        content_replace_line(playerui.content, 5, "[UNSHUFF]");
+        section_print(&playerui);
+        return UI_ACTION_SHUFFLE;
+    }
+    content_replace_line(playerui.content, 5, "[SHUFFLE]");
+    section_print(&playerui);
+    return UI_ACTION_UNSHUFFLE;
 }
 
 static deecer_result_t now_playing_create_window() {
