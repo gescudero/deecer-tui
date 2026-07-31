@@ -144,6 +144,17 @@ void player_back() {
     check_error(mpv_command(mpv, cmd));
 }
 
+void player_shuffle() {
+    LOG("Shuffle activo.\n");
+    const char *cmd[] = {"playlist-shuffle", NULL};
+    check_error(mpv_command(mpv, cmd));
+}
+
+void player_unshuffle() {
+    LOG("Unshuffle activo.\n");
+    const char *cmd[] = {"playlist-unshuffle", NULL};
+    check_error(mpv_command(mpv, cmd));
+}
 
 // =================
 // PRIVATE FUNCTIONS

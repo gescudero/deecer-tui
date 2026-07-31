@@ -59,8 +59,8 @@ int main() {
         LOG("No existe una clave ARL válida.\n");
     }
     // init de curses y la ui
-    if (!ui_init()) {
-        LOG("Error creado las ventanas.\n");
+    if (DC_SUCCESS != ui_init()) {
+        LOG("Error crenado las ventanas.\n");
         return 1;
     }
 
@@ -218,6 +218,12 @@ int main() {
                 break;
             case UI_ACTION_FORWARD:
                 player_forward();
+                break;
+            case UI_ACTION_SHUFFLE:
+                player_shuffle();
+                break;
+            case UI_ACTION_UNSHUFFLE:
+                player_unshuffle();
                 break;
             case UI_ACTION_QUIT:
                 running = false;

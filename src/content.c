@@ -147,6 +147,14 @@ void content_add_char(content_t *cont, int line_index, const char c) {
     cont->numlines = line_index + 1;
 }
 
+void content_replace_line(content_t *cont, int line_index, const char *texto) {
+    if (line_index >= cont->numlines) {
+        return;
+    }
+    cont->text[line_index] = strdup(texto);
+}
+
+
 void content_add_track(content_t *cont, track_t *track) {
     // guardamos la linea donde queremos insertar el track
     int index = cont->numlines;

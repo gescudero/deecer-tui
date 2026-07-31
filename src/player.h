@@ -68,4 +68,8 @@ void player_back();
  */
 void player_forward();
 
+void player_shuffle();
+
+void player_unshuffle();
+
 #endif

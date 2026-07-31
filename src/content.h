@@ -60,6 +60,12 @@ void content_add_line(content_t *cont, const char *texto);
 void content_add_char(content_t *cont, int line_index, const char c);
 
 /**
+ * Replaces the text in selected line with new text
+ *
+ */
+void content_replace_line(content_t *cont, int line_index, const char *texto);
+
+/**
  * Add one track pointer to content in the first free line
  * also writes text in that line with track_name (artist_name)
  *
