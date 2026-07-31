@@ -40,6 +40,7 @@ struct track_t {
     artist_t **artists; //results:ARTISTS ->
     int nb_artists; // number of artists 
     album_t *album; //results:ALB_ID ->
+    bool has_url;
     char *media_url; // peticion a -> DEEZER_MEDIA_URL
 };
 struct artist_t {
