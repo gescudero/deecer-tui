@@ -5,6 +5,7 @@
 #include "utils.h"
 #include <sched.h>
 #include <stddef.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -83,22 +84,98 @@ void player_openplaylist(char *file_path) {
     const char *cmd[] = {"loadlist", file_path, NULL};
     check_error(mpv_command(mpv,cmd));
     LOG("[player] Loadlist command...\n");
+    
+    // esta opcion fuerza a que se pare cada vez que acabe de reproducir un 
+    // fichero. En el evento end-of-file, yo pongo en pausa, me aseguro
+    // de que el fichero este descargado y continuo la reproduccion
+    mpv_set_option_string(mpv, "keep-open", "yes");
+    
     player_running = 1;
     while (player_running) {
         mpv_event *event = mpv_wait_event(mpv, 100);
         if (event->event_id != MPV_EVENT_NONE) {
-            LOG("[playlist] event: %s\n", mpv_event_name(event->event_id));
+            // LOG("[playlist] event: %s\n", mpv_event_name(event->event_id));
         }
         if (event->event_id == MPV_EVENT_SHUTDOWN) {
             player_running = 0;
             break;
-        } else if (event->event_id == MPV_EVENT_PROPERTY_CHANGE) {
-            LOG("MPV_EVENT_PROPERTY_CHANGE\n");
+        }
+        if (event->event_id == MPV_EVENT_END_FILE) {
+            LOG("MPV_EVENT_END_FILE.\n");
+            player_pause();
+            LOG("Reproductor pausado.\n");
+            // esperamos hasta que nos confirmen que estamos pausados
+            int paused = 0;
+            while (!paused) {
+                mpv_get_property(mpv, "pause", MPV_FORMAT_FLAG, &paused);
+                if (!paused) {
+                    mpv_wait_event(mpv, 0.1);
+                }
+            }
+            /**
+             * Averiguamos en que posicion estamos
+             */
+            int64_t playlist_pos = -1;
+            mpv_get_property(mpv, "playlist-pos", MPV_FORMAT_INT64, &playlist_pos);
+            LOG("playlist_pos: %lu\n", playlist_pos);
+            /**
+             * la property playlist nos devuelve una lista de nodos
+             * en la que cada nodo es un track, que incluye 
+             * - filename (con path completo)
+             * - id 
+             * - playlist-path
+             */
+            mpv_node playlist_node = {0};
+            mpv_get_property(mpv, "playlist", MPV_FORMAT_NODE, &playlist_node);
+            mpv_node_list *playlist_list = playlist_node.u.list;
+            for (int i=0;i<playlist_list->num;i++) {
+                mpv_node *item = &(playlist_list->values[i]);
+                // todo lo que se recibe son NODE_MAP
+                if (MPV_FORMAT_NODE_MAP == item->format) {
+                    mpv_node_list *itemlist = item->u.list;
+                    for (int j=0; j<itemlist->num; j++) {
+                        if (i == playlist_pos) {
+                            if (strcmp(itemlist->keys[j], "filename") == 0) {
+                                char *filename = strdup(itemlist->values[j].u.string);
+                                remove_extension(filename);
+                                track_t *track = deezer_get_track(strtoul(filename, NULL, 10));
+                                LOG("NEXT TRACK: %s\n", track->title);
+                                // Ahora es cuando descargaríamos el tema
+                                LOG("downloading (o no si ya lo tenemos)...\n");
+                                deezer_get_media(track, &filename);
+                                LOG("fichero %s descargado.\n", filename);
+                                free(filename);
+                            }
+                        } else {
+                            if (strcmp(itemlist->keys[j], "filename") == 0) {
+                                char *filename = strdup(itemlist->values[j].u.string);
+                                remove_extension(filename);
+                                track_t *track = deezer_get_track(strtoul(filename, NULL, 10));
+                                LOG("%d: %s\n", i, track->title);
+                                // Ahora es cuando descargaríamos el tema
+                                free(filename);
+                            }
+
+                        }
+                    }
+                }
+            }
+            LOG("Reproduciendo de nuevo\n");
+            player_play();
+        }
+        if (event->event_id == MPV_EVENT_PROPERTY_CHANGE) {
+            // LOG("MPV_EVENT_PROPERTY_CHANGE\n");
             mpv_event_property *prop = (mpv_event_property*)event->data;
-            LOG("prop->name: %s\n", prop->name);
-            LOG("prop->format: %d\n", prop->format);
+            // LOG("prop->name: %s\n", prop->name);
+            // LOG("prop->format: %d\n", prop->format);
             if (strcmp(prop->name, "media-title") == 0 && prop->format == MPV_FORMAT_STRING) {
                 char *title = *(char**)prop->data;
+                // ponemos la reproduccion en pausa con player_pause()
+                // compruebo si el fichero esta descargado
+                // si esta descargado reproducimos con player_play() y notificamos now_playing
+                // si no esta descargado, notificamos "downloading"
+                // y comenzamos la descarga, y cuando acabe la descarga continuamos
+                // con player_play()
                 player_notify_now_playing(title);
             }
         }
@@ -148,6 +225,8 @@ void player_shuffle() {
     LOG("Shuffle activo.\n");
     const char *cmd[] = {"playlist-shuffle", NULL};
     check_error(mpv_command(mpv, cmd));
+    const char *cmd_pos[] = {"playlist-play-index", "1", NULL};
+    mpv_command(mpv, cmd_pos);
 }
 
 void player_unshuffle() {
@@ -161,7 +240,6 @@ void player_unshuffle() {
 // =================
 
 static inline void check_error(int status) {
-    LOG("check_error: %d\n", status);
     if (status < 0) {
         LOG("mpv API error: %s\n", mpv_error_string(status));
     }
@@ -198,3 +276,4 @@ static void player_notify_now_playing(char *filename) {
         free(real_title);
     }
 }
+

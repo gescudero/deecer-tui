@@ -164,7 +164,6 @@ int main() {
                     // MODO PLAYLIST 
                     //
                     // 
-                    LOG("[main] Vamos a crear el fichero para la playlist\n");
                     // Creamos el fichero.
                     char *playlist_path = strdup("/tmp/playlist-deezer");
                     FILE *fptr;
@@ -180,16 +179,17 @@ int main() {
                             char *filepath = deezer_get_filepath(center_content->playlists[selected_line - 1]->tracks[i]);
                             if (filepath) {
                                 fprintf(fptr, "%s\n", filepath);
-                                LOG("Añadido %s a la playlist.\n", filepath);
                                 free(filepath);
                             }
-                            // voy a forzar a descargar cada fichero de momento es temporal
-                            // aunque para listas de 10 o 15 canciones funciona sorprendentemente bien
-                            char *filename = NULL;
-                            deezer_get_media(center_content->playlists[selected_line-1]->tracks[i], &filename);
+                            // descargamos las 3 primeras canciones y luego dejamos que sea el 
+                            // player quien pida el resto de tracks conforme las vaya reproduciendo
+                            if (i < 3) {
+                                char *filename = NULL;
+                                deezer_get_media(center_content->playlists[selected_line-1]->tracks[i], &filename);
+                                free(filename);
+                            }
                         }
                     }
-                    LOG("[main] Fichero creado\n");
                     fclose(fptr);
                     
                     player_stop();
