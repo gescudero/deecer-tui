@@ -49,15 +49,19 @@ config_t* config_init() {
     asprintf(&config_file_path, "%s/deecer-tui/config", xdg_config_home_path);
     deecer_result_t err = config_read_file(config_file_path);
     if (DC_SUCCESS == err) {
+        free(config_file_path);
         return config;
     }
     char *home_path = getenv("HOME");
     asprintf(&config_file_path, "%s/.config/deecer-tui/config", home_path);
     err = config_read_file(config_file_path);
     if (DC_SUCCESS == err) {
+        free(config_file_path);
         return config;
     }
-    printf("ERROR: Can't find config file in this paths:\n");
+    free(config_file_path);
+
+    printf("ERROR: Can't find config file in this paths or ARL is too short:\n");
     printf("${XDG_CONFIG_HOME}/deecer-tui/config\n");
     printf("${HOME}/.config/deecer-tui/config\n");
     printf("### File content ###\n");
@@ -116,6 +120,9 @@ static deecer_result_t config_read_file(char *path_to_file) {
         config_set_key(key, value);
     }
     fclose(fptr);
+    if (strlen(config->arl) < 10) {
+        return DC_ERROR_FILE_ACCESS;
+    }
     return DC_SUCCESS;
 }
 
