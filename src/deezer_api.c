@@ -82,6 +82,17 @@ static deecer_result_t deezer_create_client();
 static deecer_result_t deezer_create_user();
 
 /**
+ *
+ */
+static deecer_result_t deezer_init_track(track_t **track);
+
+/**
+ *
+ *
+ */
+static deecer_result_t deezer_init_playlist(playlist_t **playlist);
+
+/**
  * Create the playlists from user at the 
  * begining.
  */
@@ -92,7 +103,7 @@ static deecer_result_t deezer_get_playlists_for_user();
  *
  */
 static deecer_result_t deezer_create_playlist_with_tracks(track_t **tracklist, int nb_tracks, playlist_t **outplaylist);
-static deecer_result_t deezer_init_playlist(playlist_t **playlist);
+
 
 /**
  * Generate a track_t object from a json object.
@@ -132,6 +143,7 @@ static bool deezer_track_exists(unsigned long id);
 
 /**
  * Ask to the API for track info
+ * NOT USED YET
  *
  */
 static deecer_result_t deezer_get_track_data(track_t **track, unsigned long id);
@@ -175,6 +187,8 @@ static bool deezer_artist_exists(unsigned long id);
  * Generate album_t from a json snippet if does not 
  * exists on pool
  *
+ * NOT USED YET
+ *
  */
 static deecer_result_t deezer_get_album_from_json(const cJSON *json_album, album_t **album);
 
@@ -184,12 +198,16 @@ static deecer_result_t deezer_get_album_from_json(const cJSON *json_album, album
  * 
  * @param album id
  * @return album_t pointer
+ *
+ * NOT USED YET
+ *
  */
 static album_t *deezer_get_album_from_pool(unsigned long id);
 
 /**
  * Add album to pool 
  *
+ * NOT USED YET
  */
 static deecer_result_t deezer_add_album(album_t *album);
 
@@ -198,12 +216,17 @@ static deecer_result_t deezer_add_album(album_t *album);
  * 
  * @param album id
  * @return boolean
+ *
+ * NOT USED YET
+ *
  */
 static bool deezer_album_exists(unsigned long id);
 
 /**
  * Generate playlist_t from a json snippet if does not 
  * exists on pool
+ *
+ * NOT USED YET
  *
  */
 static deecer_result_t deezer_get_playlist_from_json(const cJSON *json_playlist, playlist_t **playlist);  
@@ -462,14 +485,17 @@ track_t *deezer_get_track(unsigned long id) {
     }
     return NULL;
 } 
+
 artist_t *deezer_get_artist(unsigned long id) {
     // NOT IMPLEMENTED
     return NULL;
 }
+
 album_t *deezer_get_album(unsigned long id) {
     // NOT IMPLEMENTED
     return NULL;
 }
+
 playlist_t *deezer_get_playlist(unsigned long id) {
     playlist_t *playlist = NULL;
 
@@ -714,6 +740,24 @@ static deecer_result_t deezer_create_playlist_with_tracks(track_t **tracklist, i
 // =====
 // TRACK
 // =====
+static deecer_result_t deezer_init_track(track_t **track) {
+    *track = calloc(1, sizeof(track_t));
+    if (!(*track)) {
+        return DC_ERROR_MEMORY_MAP_FAILED;
+    }
+    (*track)->id = 0;
+    (*track)->title = NULL;
+    (*track)->has_url = false;
+    (*track)->token = NULL;
+    (*track)->media_url = NULL;
+    (*track)->token_expire = 0;
+    (*track)->album = NULL;
+    (*track)->nb_artists = 0;
+    (*track)->artists = NULL;
+
+    return DC_SUCCESS;
+}
+
 static deecer_result_t deezer_get_track_from_json(const cJSON *json_track, track_t **track) {
     if (!cJSON_IsObject(json_track)) {
         return DC_ERROR_CJSON_INVALID;
@@ -735,6 +779,11 @@ static deecer_result_t deezer_get_track_from_json(const cJSON *json_track, track
         *track = deezer_get_track_from_pool(strtoul(id->valuestring, NULL, 10));
         return DC_SUCCESS;
     }
+    
+    // Cremos un objeto track nuevecito
+    if (DC_SUCCESS != deezer_init_track(&(*track))) {
+        return DC_ERROR_MEMORY_MAP_FAILED;
+    }
 
     // si no es asi, lo tenemos que desmembrar y añadir
     cJSON *title = cJSON_GetObjectItem(json_track, "SNG_TITLE");
@@ -744,10 +793,6 @@ static deecer_result_t deezer_get_track_from_json(const cJSON *json_track, track
     // de momento aun no tratamos albumes
     //cJSON *album_id = cJSON_GetObjectItem(json_track, "ALB_ID");
     
-    *track = calloc(1, sizeof(track_t));
-    if (*track == NULL) {
-        return DC_ERROR_MEMORY_MAP_FAILED;
-    }
     if (cJSON_IsString(id)){
         (*track)->id = strtoul(id->valuestring, NULL, 10);
     }
@@ -816,28 +861,6 @@ static deecer_result_t deezer_add_track(track_t *track) {
             LOG("No se ha podido conseguir los datos del track, cancelando insercion.\n");
             return err;
         }
-
-        /**
-         * DEPRECATED
-         * Este fue un mecanismo cuando tuvimos problemas con canciones que no
-         * conseguiamos un media-url correcto. Este sistema no lo solucionó.
-         * Finalmente era el tema del FALLBACK
-         */
-        // if (DC_SUCCESS != err) {
-        //     //no tenemos una url valida, asi que descargamos de nuevo los datos
-        //     //del track y volvemos a intentarlo
-        //     LOG("Segundo intento de conseguir media url.\n");
-        //     err = deezer_get_track_data(&track, track->id);
-        //     if (DC_SUCCESS != err) {
-        //         LOG("No se ha podido conseguir los datos del track, cancelando insercion.\n");
-        //         return err;
-        //     }
-        //     err = deezer_get_media_url(track);
-        //     if (DC_SUCCESS != err) {
-        //         LOG("Segundo intento de conseguir media url fallido tambien.\n");
-        //         return err;
-        //     }
-        // }
     }
     LOG("=== NEW TRACK ===\n");
     LOG("id: %lu\n", track->id);
@@ -863,24 +886,6 @@ static bool deezer_track_exists(unsigned long id) {
 }
 
 static deecer_result_t deezer_get_track_data(track_t **track, unsigned long id) {
-    // 1.inicializamos *track, borrando lo que hubiere si hay algo
-    if (!*track) {
-        track = calloc(1, sizeof(track_t*));
-        if (!*track) {
-            return DC_ERROR_MEMORY_MAP_FAILED;
-        }
-    }
-    (*track)->id = 0;
-    (*track)->token_expire = 0;
-    free((*track)->title);
-    (*track)->title = NULL;
-    free((*track)->token);
-    (*track)->token = NULL;
-    free((*track)->artists);
-    (*track)->artists = NULL;
-    (*track)->album = NULL; // album no lo liberamos, pero ya no apuntamos a el.
-    free((*track)->media_url);
-    (*track)->media_url = NULL;
     // 2.hacemos la request a la pagina de track info
     char *str_id = NULL;
     asprintf(&str_id, "%lu", id);
