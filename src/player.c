@@ -146,16 +146,6 @@ void player_openplaylist(char *file_path) {
                                 LOG("fichero %s descargado.\n", filename);
                                 free(filename);
                             }
-                        } else {
-                            if (strcmp(itemlist->keys[j], "filename") == 0) {
-                                char *filename = strdup(itemlist->values[j].u.string);
-                                remove_extension(filename);
-                                track_t *track = deezer_get_track(strtoul(filename, NULL, 10));
-                                LOG("%d: %s\n", i, track->title);
-                                // Ahora es cuando descargaríamos el tema
-                                free(filename);
-                            }
-
                         }
                     }
                 }

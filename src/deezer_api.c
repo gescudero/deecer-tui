@@ -453,6 +453,7 @@ deecer_result_t deezer_get_media(track_t *track, char **filename) {
     //comprobamos si ya existe el fichero y nos 
     //evitamos la descarga y desencriptacion
     if (access(*filename, F_OK) == 0) {
+        LOG("%s ya la teniamos descargada.\n", track->title);
         return DC_SUCCESS;
     }
     // descargamos el fichero cifrado
@@ -462,6 +463,7 @@ deecer_result_t deezer_get_media(track_t *track, char **filename) {
     if (DC_SUCCESS != deezer_decrypt_file(track)) {
         return DC_ERROR_DECRYPT;
     }
+    LOG("%s descargada y desencriptada.\n", track->title);
     return DC_SUCCESS;
 }
 

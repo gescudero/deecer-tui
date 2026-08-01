@@ -1,6 +1,9 @@
 #include "utils.h"
 #include <string.h>
 
+bool log_enabled = false;
+FILE *log_file = NULL;
+
 void remove_extension(char *filename) {
     // Limpiar todo el path hasta quedarnos con el
     // filename limpio

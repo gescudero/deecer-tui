@@ -42,6 +42,14 @@ int main() {
     // read config
     config = config_init(); 
 
+    log_enabled = config ->is_debug;
+    log_file = fopen("/tmp/deecer-tui.log", "w");
+
+    if (!log_file) {
+        log_file = stderr;
+    }
+
+
     LOG("Config cargada. User arl=%s\n", config->arl);
     LOG("keep_downloads: %d\n", config->keep_downloads);
     LOG("download_dir: %s\n", config->download_path);
@@ -252,8 +260,12 @@ int main() {
     deezer_cleanup();
     LOG("deezer,\n");
     ui_end();
-    LOG("curses, adeu.\n")
+    LOG("curses, adeu.\n");
 
+    if (log_file && log_file != stderr) {
+        fclose(log_file);
+        log_file = NULL;
+    }
     return 0;
 }
 
