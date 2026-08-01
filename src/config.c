@@ -16,7 +16,7 @@
  *
  * @return error code 
  */
-static int config_read_file(char *path_to_file);
+static deecer_result_t config_read_file(char *path_to_file);
 
 /**
  * Write each value in each key of the
@@ -39,13 +39,44 @@ config_t* config_init() {
     config->is_debug = false;
     config->deezer_active = false;
     config->keep_downloads = false;
-    config_read_file("/home/guille/.deezer/config");
-    return config;
+
+    // Order to try to find the config file
+    // 1.$XDG_CONFIG_HOME/deecer-tui/config
+    // 2.$HOME/.config/deecer-tui/config 
+    // Si no encuentra config sale mostrando error
+    char *xdg_config_home_path = getenv("XDG_CONFIG_HOME");
+    char *config_file_path = NULL;
+    asprintf(&config_file_path, "%s/deecer-tui/config", xdg_config_home_path);
+    deecer_result_t err = config_read_file(config_file_path);
+    if (DC_SUCCESS == err) {
+        return config;
+    }
+    char *home_path = getenv("HOME");
+    asprintf(&config_file_path, "%s/.config/deecer-tui/config", home_path);
+    err = config_read_file(config_file_path);
+    if (DC_SUCCESS == err) {
+        return config;
+    }
+    printf("ERROR: Can't find config file in this paths:\n");
+    printf("${XDG_CONFIG_HOME}/deecer-tui/config\n");
+    printf("${HOME}/.config/deecer-tui/config\n");
+    printf("### File content ###\n");
+    printf("DEEZER_ARL={your_arl}\n");
+    printf("IS_DEBUG=false\n");
+    printf("KEEP_DOWNLOADS=false\n");
+    printf("DOWNLOAD_PATH=/only/if/keep_downloads/true\n");
+
+    exit(0);
 }
 
 
 // PRIVATE FUNCTIONS
-static int config_read_file(char *path_to_file) {
+static deecer_result_t config_read_file(char *path_to_file) {
+    // check if file exists
+    LOG("Intentando acceder a %s\n", path_to_file);
+    if (access(path_to_file, F_OK) != 0) {
+        return DC_ERROR_FILE_ACCESS;
+    }
     FILE *fptr;
     char textline[1024];
     fptr = fopen(path_to_file, "r");
