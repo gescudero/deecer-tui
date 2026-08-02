@@ -18,6 +18,17 @@ Una de las cosas que puede que te llamen la atención es que este repo esté doc
 - [x] Mostrar y reproducir listas de reproduccion del usuario
 - [ ] Completar funciones del menu (Home/Explore/Library/Settings)
 
+## Install
+- Clone the repo
+- Install dependencies:
+   - gcc
+   - ncurses
+   - libcurl
+   - cjson
+   - libmpv
+- Run `make` on deecer-tui folder.
+- I will publish a bin release when I have something solid, now is working but is pre-alpha.
+
 ## Notas
 Para aprender he ido combinando lecturas clásicas cómo el libro `El lenguaje de programacion C` de K&R, visionado de videos de Youtube, lecturas de `man <LIBRARY_FUNCTION>` (¡algo que me ha encantado!), posts de StackOverflow, Reddit y demás foros de internet, y sí, también he preguntado en ocasiones a la IA. He usado la web de deepseek para hacerle preguntas de las que no conseguía respuesta buscando de otros modos o necesitaba respuesta a un tema demasiado concreto, pero siempre intentando que me explicase la respuesta como si fuera un profe, y no que me diera el código con la solución. En otras ocasiones le hubiera pedido trozos de código, pero en este proyecto prefería ir descubriendo yo las soluciones.
 
