@@ -1,3 +1,11 @@
+
+Moved to [codeberg](https://codeberg.org/guillata/deecer-tui)
+
+***This repo is not mirror anymore***
+
+----
+
+
 # deecer-tui [WORK IN PROGRESS]
 Un cliente de consola para deezer, escrito en C y usando ncurses, libcurl, cjson y libmpv.
 
@@ -31,6 +39,16 @@ Una de las cosas que puede que te llamen la atención es que este repo esté doc
    - libcurl
    - cjson
    - libmpv
+- Compile lib/lib.rs with cargo and copy libdeezer_crypto.a to lib/ folder. The contents of the Cargo.toml should be something like this
+```
+[package]
+name = "deezer_crypto"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["staticlib"]
+```
 - Run `make` on deecer-tui folder.
 - I will publish a bin release when I have something solid, now is working but is pre-alpha.
 
