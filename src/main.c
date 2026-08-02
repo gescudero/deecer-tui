@@ -12,6 +12,12 @@
 #include <cjson/cJSON.h>
 #include <pthread.h>
 
+pthread_t player_thread = 0;
+
+/**
+ *
+ */
+void close_app();
 
 /**
  * Reproducir una url o un file mediante un path
@@ -37,7 +43,6 @@ int main() {
     bool running = true;
     ui_action_t action;
     char ui_response[256];
-    pthread_t player_thread = 0;
 
     // read config
     config = config_init(); 
@@ -62,19 +67,23 @@ int main() {
             LOG("Api inicializada.\n");
         } else {
             LOG("Ha ocurrido un error iniciando la api de deezer. ERROR CODE: %d\n", err);
+            close_app();
+            return 1;
         }
     } else {
         LOG("No existe una clave ARL válida.\n");
     }
     // init de curses y la ui
     if (DC_SUCCESS != ui_init()) {
-        LOG("Error crenado las ventanas.\n");
+        LOG("Error creando las ventanas.\n");
+        close_app();
         return 1;
     }
 
     // inicializamos el player (libmpv)
     if (!player_init()) {
         LOG("Error creando el player.\n");
+        close_app();
         return 1;
     }
     if (config->is_debug) {
@@ -242,6 +251,10 @@ int main() {
                 break;
         }
     }
+    close_app();
+    return 0;
+}
+void close_app() {
     // Rutinas de cerrado de la aplicacion 
     LOG("Vamos cerrando:\n");
     player_stop();
@@ -266,9 +279,8 @@ int main() {
         fclose(log_file);
         log_file = NULL;
     }
-    return 0;
-}
 
+}
 void* thread_player_openurl(void *arg) {
     char *url = (char*)arg; // casteamos el argumento
     LOG("[thread_player_openurl] - Pedimos reproducir\n%s\n", url);

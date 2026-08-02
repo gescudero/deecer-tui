@@ -439,6 +439,7 @@ static void ui_end_content() {
     content_free(search.content);
     content_free(center.content);
     content_free(playerui.content);
+    content_free(now_playing.content);
 }
 
 static void ui_start_colors() {

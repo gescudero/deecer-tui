@@ -60,6 +60,9 @@ void content_add_line(content_t *cont, const char *texto){
         track_t **temp_tracks = realloc(cont->tracks, new_max * sizeof(track_t*));
         playlist_t **temp_playlists = realloc(cont->playlists, new_max * sizeof(playlist_t*));
         if ( temp_text == NULL || temp_tracks == NULL || temp_playlists == NULL) {
+            free(temp_text);
+            free(temp_tracks);
+            free(temp_playlists);
             return;
         }
         // si realloc ha podido reservar el espacio asignamos ese
@@ -258,11 +261,11 @@ void content_clear(content_t *cont) {
     if (cont == NULL) {
         return;
     }
-    // lo mismo. si el texto es null, no free
+    // lo mismo. si el texto es null, nos aseguramos de que 
+    // no ejecutemos el bucle siguiente 
     if (cont->text == NULL) {
         cont->numlines = 0;
         cont->maxlines = 0;
-        return;
     }
     // recorremos cada linea usada y liberamos su memoria
     // si es necesario
@@ -280,6 +283,10 @@ void content_clear(content_t *cont) {
     // ya que no nos pertenecen (al menos esa es mi intención)
     if (cont->tracks != NULL) {
         free(cont->tracks);
+    }
+    // Idem con las playlists
+    if (cont->playlists != NULL) {
+        free(cont->playlists);
     }
     // seteamos content->text a NULL
     cont->text = NULL;

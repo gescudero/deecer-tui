@@ -16,6 +16,7 @@ struct memory_t {
 struct deezer_client_t {
     CURL *curl_handle; // the curl object
     CURLcode curl_res; // response codes for curl 
+    struct curl_slist *headers; //list of headers
     memory_t mem; // dataholder for curl requests
     char *arl;//from config file
     char *session_id;//results:SESSION_ID 
