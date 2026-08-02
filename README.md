@@ -17,6 +17,11 @@ Una de las cosas que puede que te llamen la atención es que este repo esté doc
 - [x] Reproducir los tracks del resultado de la busqueda como una playlist
 - [x] Mostrar y reproducir listas de reproduccion del usuario
 - [ ] Completar funciones del menu (Home/Explore/Library/Settings)
+- [ ] Abrir pagina del artista al pulsar 'a' sobre un track
+   - [ ] Mostrar una lista con las top tracks
+   - [ ] Cuando acaben las top tracks, una lista con los albums
+- [ ] Abrir pagina del Album al pulsar 'b' sobre un track
+   - [ ] Mostra una lista con las tracks del album.
 
 ## Install
 - Clone the repo
